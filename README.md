@@ -9,7 +9,7 @@
 
 Paper Link: 
 
-> Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo21, and FineFake.
+> Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo-21, and FineFake.
 
 ---
 
