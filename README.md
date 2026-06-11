@@ -27,8 +27,8 @@ Paper Link:
 │                         ↓                                
 │  (c) Multi-Granularity Cross-Modal Inconsistency Mining  
 │      ├── Global-Global Inconsistency                     
-│      ├── Local-Local Inconsistency (Cross-Attention)     
-│      └── Global-Local Inconsistency                      
+│      ├── Global-Local Inconsistency     
+│      └── Local-Local Inconsistency (Cross-Attention)                      
 │                         ↓                                
 │  (d) Hierarchical Conflict Synergy Network               
 │                         ↓                                
