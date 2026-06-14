@@ -1,4 +1,4 @@
-# DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 """
 Various utilities for neural networks.
