@@ -7,7 +7,7 @@ import random
 from run import Run
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_name', default='DDIAN')  # 此处驱动 (底层已替换为 DDIAN)
+parser.add_argument('--model_name', default='DDIN')  # 此处驱动 (底层已替换为 DDIN)
 parser.add_argument('--dataset', default='weibo21')    # weibo21 或 weibo
 parser.add_argument('--epoch', type=int, default=50)
 parser.add_argument('--max_len', type=int, default=197)
@@ -47,7 +47,7 @@ elif args.emb_type == 'w2v':
     emb_dim = args.w2v_emb_dim
     vocab_file = args.w2v_vocab_file
 
-print(f'lr: {args.lr}; model name: {args.model_name} (DDIAN Core); emb_type: {args.emb_type}; '
+print(f'lr: {args.lr}; model name: {args.model_name} (DDIN Core); emb_type: {args.emb_type}; '
       f'batchsize: {args.batchsize}; epoch: {args.epoch}; gpu: {args.gpu}; emb_dim: {emb_dim}')
 
 config = {

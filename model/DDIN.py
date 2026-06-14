@@ -1,5 +1,5 @@
 """
-DDIAN.py - DDIAN: Domain-aware Disentanglement and Interaction Network
+DDIN.py - DDIN: Domain-Aware Disentanglement Interaction Network
 整合版本 - 以第二份代码为准，第一份代码以注释形式保留
 """
 
@@ -195,17 +195,17 @@ class DomainAdaptiveWeighting(nn.Module):
 
 
 # =========================================================================
-# DDIAN 主模型 (DDIAN Model)
+# DDIN 主模型 (DDIN Model)
 # =========================================================================
-class DDIAN(nn.Module):
+class DDIN(nn.Module):
     """
-    DDIAN: Domain-aware Disentanglement and Interaction Network
+    DDIN: Domain-Aware Disentanglement Interaction Network
     多模态虚假新闻检测模型
     """
 
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
                  num_domains=9, hidden_dim=768, num_classes=2):
-        super(DDIAN, self).__init__()
+        super(DDIN, self).__init__()
 
         # ===== (a) 双流多粒度特征提取 =====
         # BERT for local text features
@@ -412,7 +412,7 @@ class Trainer():
 
         # 初始化模型
         num_domains = len(category_dict)
-        self.model = DDIAN(
+        self.model = DDIN(
             bert_model_path=bert,
             mae_model_path=mae_model_path,
             clip_model_name=clip_model_name,
@@ -538,7 +538,7 @@ class Trainer():
             if mark == 'save':
                 if self.use_ema and ema:
                     ema.apply_shadow()
-                torch.save(self.model.state_dict(), os.path.join(self.save_param_dir, 'parameter_DDIAN.pkl'))
+                torch.save(self.model.state_dict(), os.path.join(self.save_param_dir, 'parameter_DDIN.pkl'))
                 if self.use_ema and ema:
                     ema.restore()
             elif mark == 'esc':
@@ -546,7 +546,7 @@ class Trainer():
             else:
                 continue
 
-        self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIAN.pkl')))
+        self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl')))
         if self.use_ema and ema:
             ema.apply_shadow()
         results0, results1, results2, results3 = self.test(self.test_loader)
