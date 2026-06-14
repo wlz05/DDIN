@@ -1,4 +1,6 @@
 # -*-codeing = utf-8 -*-
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 import pickle
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models

@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 from torch.utils.data import TensorDataset, DataLoader
 from transformers import BertTokenizer
 import pandas as pd
