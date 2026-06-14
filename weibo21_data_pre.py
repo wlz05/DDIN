@@ -12,27 +12,28 @@ import cn_clip.clip as clip
 from torchvision import datasets, models, transforms
 from cn_clip.clip import load_from_name, available_models
 def read_image():
+    """读取图片并预处理，损坏图片用黑色占位图替代"""
     image_list = {}
     file_list = ['Weibo_21/nonrumor_images/', 'Weibo_21/rumor_images/']
     for path in file_list:
+        if not os.path.exists(path):
+            print(f"[WARNING] Image directory not found: {path}, skipping...")
+            continue
         data_transforms = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-            ])
-        for i, filename in enumerate(os.listdir(path)):  # assuming gif
-
-            # print(filename)
+        ])
+        for i, filename in enumerate(os.listdir(path)):
             try:
                 im = Image.open(path + filename).convert('RGB')
                 im = data_transforms(im)
-                #im = 1
                 image_list[filename.split('/')[-1].split(".")[0]] = im
-            except:
-                print("wrong"+filename)
-    print("image length " + str(len(image_list)))
-    #print("image names are " + str(image_list.keys()))
+            except Exception as e:
+                print(f"[WARNING] Corrupted image: {path}{filename}, using black placeholder. Error: {e}")
+                image_list[filename.split('/')[-1].split(".")[0]] = torch.zeros(3, 224, 224)
+    print(f"[INFO] Loaded {len(image_list)} images total")
     return image_list
 
 def _init_fn(worker_id):
