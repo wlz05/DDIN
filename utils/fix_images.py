@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 root = '/root/autodl-tmp/FineFake_dataset/'
 
-# 严格按照 DDIAN / MAE 要求的格式处理图片 (3通道, 224x224)
+# 严格按照 DDIN / MAE 要求的格式处理图片 (3通道, 224x224)
 data_transforms = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),

@@ -1,11 +1,11 @@
-# DDIAN: Domain-aware Disentanglement Interaction and Network
+# DDIN: Domain-Aware Disentanglement Interaction Network
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-red.svg)](https://pytorch.org/)
 [![CUDA](https://img.shields.io/badge/CUDA-12.1-green.svg)](https://developer.nvidia.com/cuda-toolkit)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**DDIAN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation.
+**DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation.
 
 Paper Link: 
 
@@ -17,7 +17,7 @@ Paper Link:
 
 ```
 ┌──────────────────────────────────────────────────────────
-│                   DDIAN Architecture                     
+│                   DDIN Architecture                     
 ├──────────────────────────────────────────────────────────
 │  (a) Dual-Stream Multi-Granularity Feature Extraction    
 │      BERT (text local) + MAE (image local)               
@@ -50,9 +50,9 @@ Paper Link:
 ## 📁 Project Structure
 
 ```
-DDIAN-code/
+DDIN-code/
 ├── model/
-│   ├── DDIAN.py              # DDIAN core model + Trainer
+│   ├── DDIN.py              # DDIN core model + Trainer
 │   ├── layers.py             # Base layers (Embedding, MLP, etc.)
 │   ├── pivot.py              # Hypergraph convolution and auxiliary modules
 │   ├── bert.py               # BERT-related modules
@@ -178,7 +178,7 @@ mkdir -p ./model_weights/clip_cn/
 ```bash
 # Train on Weibo, Weibo21, or FineFake
 python main.py \
-    --model_name DDIAN \
+    --model_name DDIN \
     --dataset xxxxxx \
     --epoch 50 \
     --batchsize 64 \
@@ -192,7 +192,7 @@ python main.py \
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--model_name` | `DDIAN` | Model name (DDIAN) |
+| `--model_name` | `DDIN` | Model name (DDIN) |
 | `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, or `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
