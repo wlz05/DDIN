@@ -4,9 +4,12 @@ import pandas as pd
 import torch
 import pickle
 import os
-from PIL import Image
+from PIL import Image, ImageFile
 from torchvision import transforms
 from tqdm import tqdm
+
+# 允许加载截断/损坏的图片
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 root = '/root/autodl-tmp/FineFake_dataset/'
 
@@ -20,25 +23,59 @@ data_transforms = transforms.Compose([
 
 
 def process_split(split):
-    df = pd.read_pickle(root + f'{split}.pkl')
+    pkl_path = root + f'{split}.pkl'
+    if not os.path.exists(pkl_path):
+        raise FileNotFoundError(f"[ERROR] Data pickle not found: {pkl_path}")
+
+    df = pd.read_pickle(pkl_path)
     images = []
+    corrupted_count = 0
+    missing_count = 0
+
     print(f"正在将 {split} 集恢复为 4D 图像张量 (3x224x224)...")
+
     for img_path in tqdm(df['image_path']):
         full_path = os.path.join(root, img_path)
+
+        # 检查文件是否存在
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            missing_count += 1
+            if missing_count <= 5:
+                print(f"[WARNING] Image file not found: {full_path}, using black placeholder")
+            images.append(torch.zeros(3, 224, 224))
+            continue
+
         try:
             im = Image.open(full_path).convert('RGB')
-            images.append(data_transforms(im))
-        except:
+            im = data_transforms(im)
+            images.append(im)
+        except Exception as e:
+            corrupted_count += 1
+            if corrupted_count <= 5:
+                print(f"[WARNING] Corrupted image: {full_path}, error: {e}")
             # 损坏的图片用全零黑图占位，保证维度对齐不报错
             images.append(torch.zeros(3, 224, 224))
 
+    if missing_count > 0:
+        print(f"[INFO] {split}: {missing_count} missing images replaced with black placeholder")
+    if corrupted_count > 0:
+        print(f"[INFO] {split}: {corrupted_count} corrupted images replaced with black placeholder")
+
     # 堆叠成 [N, 3, 224, 224]
     final_tensor = torch.stack(images)
-    with open(root + f'f_{split}_loader.pkl', 'wb') as f:
-        pickle.dump(final_tensor, f)
+    output_path = root + f'f_{split}_loader.pkl'
+    try:
+        with open(output_path, 'wb') as f:
+            pickle.dump(final_tensor, f)
+        print(f"[INFO] Saved {split} tensor ({final_tensor.shape}) to {output_path}")
+    except Exception as e:
+        raise IOError(f"[ERROR] Failed to save {output_path}: {e}")
 
 
-process_split('train')
-process_split('val')
-process_split('test')
-print("✅ 维度修复完毕！真正的图片特征已就绪！")
+if __name__ == '__main__':
+    for split_name in ['train', 'val', 'test']:
+        try:
+            process_split(split_name)
+        except Exception as e:
+            print(f"[ERROR] Failed to process split '{split_name}': {e}")
+    print("✅ 维度修复完毕！真正的图片特征已就绪！")

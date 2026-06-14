@@ -13,28 +13,31 @@ import numpy as np
 from PIL import Image
 import pickle
 def read_image():
+    """读取图片并预处理，损坏图片用黑色占位图替代"""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     for path in file_list:
+        if not os.path.exists(path):
+            print(f"[WARNING] Image directory not found: {path}, skipping...")
+            continue
         data_transforms = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-            ])
+        ])
 
-        for i, filename in enumerate(os.listdir(path)):  # assuming gif
-
-            # print(filename)
+        for i, filename in enumerate(os.listdir(path)):
             try:
                 im = Image.open(path + filename).convert('RGB')
                 im = data_transforms(im)
-                #im = 1
                 image_list[filename.split('/')[-1].split(".")[0].lower()] = im
-            except:
-                print("wrong"+filename)
-    print("image length " + str(len(image_list)))
-    #print("image names are " + str(image_list.keys()))
+            except Exception as e:
+                print(f"[WARNING] Corrupted image: {path}{filename}, using black placeholder. Error: {e}")
+                placeholder = torch.zeros(3, 224, 224)
+                image_list[filename.split('/')[-1].split(".")[0].lower()] = placeholder
+
+    print(f"[INFO] Loaded {len(image_list)} images total")
     return image_list
 
 def _init_fn(worker_id):
@@ -48,17 +51,37 @@ def df_filter(df_data):
     df_data = df_data[df_data['category'] != '无法确定']
     return df_data
 
-def word2input(texts,vocab_file,max_len):
+def word2input(texts, vocab_file, max_len):
+    """BERT 文本分词，自动处理缺失/异常文本"""
+    if not os.path.exists(vocab_file):
+        raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
     tokenizer = BertTokenizer(vocab_file=vocab_file)
-    token_ids =[]
-    for i,text in enumerate(texts):
-        token_ids.append(tokenizer.encode(text, max_length=max_len, add_special_tokens=True, padding='max_length',
-                             truncation=True))
+    token_ids = []
+    skipped_count = 0
+    for i, text in enumerate(texts):
+        if text is None or (isinstance(text, float) and pd.isna(text)) or not isinstance(text, str):
+            skipped_count += 1
+            if skipped_count <= 5:
+                print(f"[WARNING] Text at index {i} is missing/invalid, using empty string")
+            text = ""
+        text = text.strip()
+        if len(text) == 0:
+            text = " "
+        try:
+            token_ids.append(tokenizer.encode(text, max_length=max_len, add_special_tokens=True,
+                                              padding='max_length', truncation=True))
+        except Exception as e:
+            skipped_count += 1
+            if skipped_count <= 5:
+                print(f"[WARNING] Tokenizer failed at index {i}: {e}")
+            token_ids.append([0] * max_len)
+    if skipped_count > 0:
+        print(f"[INFO] word2input: {skipped_count}/{len(texts)} texts repaired with fallback")
     token_ids = torch.tensor(token_ids)
     masks = torch.zeros(token_ids.size())
-    for i,token in enumerate(token_ids):
+    for i, token in enumerate(token_ids):
         masks[i] = (token != 0)
-    return token_ids,masks
+    return token_ids, masks
 
 class bert_data():
     def __init__(self,max_len, batch_size, vocab_file, category_dict, num_workers=2):
