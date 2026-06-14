@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 import datetime
 import math
 import numpy as np

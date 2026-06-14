@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 # model/domain.py
 
 import logging

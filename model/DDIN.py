@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 """
 DDIN.py - DDIN: Domain-Aware Disentanglement Interaction Network
 整合版本 - 以第二份代码为准，第一份代码以注释形式保留

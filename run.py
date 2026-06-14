@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 import os
 from utils.clip_dataloader import bert_data as weibo_data
 from utils.weibo21_clip_dataloader import bert_data as weibo21_data
