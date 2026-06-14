@@ -63,10 +63,10 @@ class AdaIN(nn.Module):
 
 
 try:
-    import models_mae
+    import mae
 except ImportError:
-    logger.error("Failed to import models_mae. Ensure it's in the PYTHONPATH.")
-    models_mae = None
+    logger.error("Failed to import mae. Ensure it's in the PYTHONPATH.")
+    mae = None
 
 HAS_CUSTOM_LAYERS = False
 try:
@@ -291,9 +291,9 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             self.bert = None
 
         try:
-            if models_mae is not None:
+            if mae is not None:
                 model_size_mae = "base"
-                self.image_model_mae = models_mae.__dict__[f"mae_vit_{model_size_mae}_patch16"](norm_pix_loss=False)
+                self.image_model_mae = mae.__dict__[f"mae_vit_{model_size_mae}_patch16"](norm_pix_loss=False)
                 if mae_checkpoint_path and os.path.exists(mae_checkpoint_path):
                     logger.info(f"Loading MAE checkpoint from: {mae_checkpoint_path}")
                     checkpoint = torch.load(mae_checkpoint_path, map_location='cpu')
@@ -310,7 +310,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                 if self.use_cuda: self.image_model_mae.cuda()
                 logger.info("MAE model initialized.")
             else:
-                logger.error("models_mae module not available. MAE model cannot be loaded.")
+                logger.error("mae module not available. MAE model cannot be loaded.")
                 self.image_model_mae = None
         except Exception as e:
             logger.error(f"Failed to load MAE model: {e}")

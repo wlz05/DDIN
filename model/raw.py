@@ -7,7 +7,7 @@ from positional_encodings.torch_encodings import PositionalEncoding1D, Positiona
 from transformers import BertModel
 import torch.nn as nn
 # from positional_encodings.torch_encodings import PositionalEncoding1D
-import models_mae
+import mae
 from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu
 from utils.utils import metricsTrueFalse
 from .layers import *
@@ -302,7 +302,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.att_mlp_mm = MLP_fusion(320, 2, [174], 0.1)
 
         self.model_size = "base"
-        self.image_model = models_mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
+        self.image_model = mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
         self.image_model.cuda()
         checkpoint = torch.load('./mae_pretrain_vit_{}.pth'.format(self.model_size), map_location='cpu')
         self.image_model.load_state_dict(checkpoint['model'], strict=False)
@@ -671,32 +671,10 @@ class Trainer():
         optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.98)
         recorder = Recorder(self.early_stop)
-
-        # Curriculum learning weight adjustment strategy
-        total_epochs = self.epoches  # Total number of epochs
-        transition_epoch = total_epochs // 2  # Epoch for weight transition, set to half of total epochs
-        sharpness = 5  # Sigmoid steepness, higher = faster transition
-
         for epoch in range(self.epoches):
             self.model.train()
             train_data_iter = tqdm.tqdm(self.train_loader)
             avg_loss = Averager()
-
-            # Compute current epoch weight
-            # Dynamically adjust loss0 weight via sigmoid, auxiliary loss weight = (1 - weight_loss0)
-            weight_loss0 = 1 / (1 + torch.exp(torch.tensor(-(epoch - transition_epoch) / sharpness)))
-            weight_loss_aux = 1.0 - weight_loss0
-
-            # Print current learning stage and weights
-            if epoch < transition_epoch // 2:
-                learning_stage = "Beginner: building foundation"
-            elif epoch < transition_epoch:
-                learning_stage = "Intermediate: gradual transition"
-            else:
-                learning_stage = "Advanced: focused breakthrough"
-            print(
-                f"Epoch {epoch + 1}/{total_epochs},  Learning Stage: {learning_stage},  Loss0 Weight: {weight_loss0:.3f}, Aux Loss Weight: {weight_loss_aux:.3f}")
-
             for step_n, batch in enumerate(train_data_iter):
                 batch_data = clipdata2gpu(batch)
                 label = batch_data['label']
@@ -708,10 +686,7 @@ class Trainer():
                 loss12 = loss_fn(text_fake_news, label.float())
                 loss22 = loss_fn(image_fake_news, label.float())
                 loss32 = loss_fn(fusion_fake_news, label.float())
-                # loss = loss0+(loss12+loss22+loss32)/3
-
-                # Apply dynamic weight to compute total loss
-                loss = weight_loss0 * loss0 + weight_loss_aux * (loss12 + loss22 + loss32) / 3
+                loss = loss0 + (loss12 + loss22 + loss32) / 3
 
                 optimizer.zero_grad()
                 loss.backward()
