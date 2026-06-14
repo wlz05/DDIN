@@ -50,62 +50,62 @@ Paper Link:
 ## 📁 Project Structure
 
 ```
-DDIN-code/
+DDIN/
 ├── model/
-│   ├── DDIN.py              # DDIN core model + Trainer
-│   ├── layers.py             # Base layers (Embedding, MLP, etc.)
-│   ├── pivot.py              # Hypergraph convolution and auxiliary modules
-│   ├── bert.py               # BERT-related modules
+│   ├── net.py                # DDIN core model + Trainer
+│   ├── layers.py             # Base layers
+│   ├── pivot.py              # Hypergraph convolution
+│   ├── bert.py               # BERT modules
 │   ├── domain.py             # Domain processing
-│   ├── domain_weibo.py       # Weibo dataset domain adaptation
-│   ├── domain_weibo21.py     # Weibo21 dataset domain adaptation
-│   ├── domain_gossipcop.py   # GossipCop dataset adaptation
-│   ├── domain_raw.py         # Raw domain processing
-│   ├── clip_domain.py        # CLIP domain module
+│   ├── weibo.py              # Weibo dataset adapter
+│   ├── w21.py                # Weibo21 dataset adapter
+│   ├── gossip.py             # GossipCop dataset adapter
+│   ├── raw.py                # Raw domain processing
+│   ├── clip.py               # CLIP domain module
 │   └── test.py               # Test script
-├── CNN_architectures/        # CNN architecture implementations
-│   ├── pytorch_resnet.py     # ResNet
-│   ├── pytorch_vgg_implementation.py  # VGG
-│   ├── pytorch_efficientnet.py        # EfficientNet
-│   ├── pytorch_inceptionet.py         # InceptionNet
-│   ├── lenet5_pytorch.py     # LeNet-5
+├── cnn/
+│   ├── resnet.py             # ResNet
+│   ├── vgg.py                # VGG
+│   ├── efficient.py          # EfficientNet
+│   ├── inception.py          # InceptionNet
+│   ├── lenet.py              # LeNet-5
 │   ├── unet.py               # U-Net
-│   ├── nn.py                 # General network modules
-│   └── fp16_util.py          # Mixed precision training utilities
+│   ├── nn.py                 # Network modules
+│   └── fp16.py               # Mixed precision utils
 ├── utils/
-│   ├── dataloader.py         # General data loader
-│   ├── clip_dataloader.py    # CLIP data loader (Weibo)
-│   ├── weibo_clip_dataloader.py      # Weibo CLIP loader
-│   ├── weibo21_clip_dataloader.py    # Weibo21 CLIP loader
-│   ├── utils.py              # Utility functions (metrics, recorder, etc.)
-│   ├── extract-finefake.py   # FineFake data extraction
-│   ├── fast_split.py         # Fast data splitting
-│   └── fix_images.py         # Image fixing utilities
-├── util/
+│   ├── loader.py             # Data loader
+│   ├── clipld.py             # CLIP data loader
+│   ├── wloader.py            # Weibo CLIP loader
+│   ├── w21ld.py              # Weibo21 CLIP loader
+│   ├── utils.py              # Metrics, recorder
+│   ├── extract.py            # FineFake extraction
+│   ├── fsplit.py             # Fast data split
+│   ├── fiximg.py             # Image fix utils
 │   ├── datasets.py           # Dataset processing
 │   ├── crop.py               # Image cropping
 │   ├── lars.py               # LARS optimizer
-│   ├── lr_decay.py           # Learning rate decay
-│   ├── lr_sched.py           # Learning rate scheduling
-│   ├── misc.py               # Miscellaneous utilities
-│   └── pos_embed.py          # Positional encoding
-├── Weibo_21/                 # Weibo21 dataset utilities
+│   ├── decay.py              # LR decay
+│   ├── sched.py              # LR scheduling
+│   ├── misc.py               # Miscellaneous utils
+│   └── pos.py                # Positional encoding
+├── w21/
 │   ├── data.py               # Data processing
-│   ├── data_2.py             # Data processing v2
-│   ├── try.py                # Experiment script
-│   └── variables.py          # Variable configuration
-├── main.py                   # 🚀 Main entry point
-├── run.py                    # Run controller (data loading + training dispatch)
-├── models_mae.py             # MAE (Masked Autoencoder) model definition
-├── FakeNet_dataset.py        # FakeNet dataset class
+│   ├── data2.py              # Data processing v2
+│   ├── probe.py              # Experiment script
+│   └── config.py             # Configuration
+├── main.py                   # Entry point
+├── run.py                    # Training dispatch
+├── mae.py                    # MAE model
+├── dataset.py                # FakeNet dataset
 ├── feature.py                # Feature extraction
-├── data_pre.py               # Data preprocessing
-├── clip_data_pre.py          # CLIP data preprocessing
-├── fenge.py                  # Data splitting utility
-├── weibo21_data_pre.py       # Weibo21 data preprocessing
-├── weibo21_clip_data_pre.py  # Weibo21 CLIP preprocessing
-├── requirements.txt          # Python dependencies
-└── .gitignore                # Git ignore rules
+├── preproc.py               # Preprocessing
+├── clipprep.py              # CLIP preprocessing
+├── w21prep.py               # Weibo21 preprocessing
+├── w21clip.py               # Weibo21 CLIP preprocessing
+├── split.py                  # Split utility
+├── probe.py                  # Test probe
+├── requirements.txt
+└── .gitignore
 ```
 
 ---
@@ -216,7 +216,7 @@ python main.py \
 
 #### Weibo21 Dataset
 ```
-./Weibo_21/
+./w21/
 ├── train_datasets.xlsx
 ├── val_datasets.xlsx
 └── test_datasets.xlsx
@@ -236,7 +236,7 @@ python main.py \
 
 **Extract CLIP features from FineFake:**
 ```bash
-python utils/extract-finefake.py
+python utils/extract.py
 ```
 This script loads images from the FineFake dataset, encodes them with Chinese CLIP (`ViT-B-16`), and saves the features as `f_train_loader.pkl` and `f_train_clip.pkl` for downstream training.
 

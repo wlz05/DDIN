@@ -13,11 +13,11 @@ from transformers import BertModel, CLIPModel
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Try importing MAE model definition (models_mae.py in root)
+# Try importing MAE model definition (mae.py in root)
 try:
-    import models_mae
+    import mae
 except ImportError:
-    logger.error("Failed to import models_mae. Ensure models_mae.py is in the project root.")
+    logger.error("Failed to import mae. Ensure mae.py is in the project root.")
     raise
 
 # Try importing utils functions (utils.py in utils/ subdirectory)
@@ -240,7 +240,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.model_size = "base";
         mae_cp = f'./mae_pretrain_vit_{self.model_size}.pth'
         try:
-            self.image_model = models_mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
+            self.image_model = mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
             if os.path.exists(mae_cp):
                 logger.info(f"Loading MAE weights: {mae_cp}")
                 cp = torch.load(mae_cp, map_location='cpu')

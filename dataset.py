@@ -14,7 +14,7 @@ from transformers import BertTokenizer, CLIPProcessor
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 logger = logging.getLogger(__name__)
 
-class FakeNet_dataset(data.Dataset):
+class dataset(data.Dataset):
     # --- NOTE: __init__ parameter order (required first, optional after) ---
     def __init__(
         self,
@@ -42,9 +42,9 @@ class FakeNet_dataset(data.Dataset):
         assert (
             self.dataset_name == "politi" or self.dataset_name == "gossip"
         ), "Error! Only 'gossip' or 'politi' are supported!"
-        super(FakeNet_dataset, self).__init__()
+        super(dataset, self).__init__()
 
-        logger.info(f"FakeNet_dataset init: dataset_name='{self.dataset_name}', is_train={is_train}")
+        logger.info(f"dataset init: dataset_name='{self.dataset_name}', is_train={is_train}")
         logger.info(f"Duplicate fake (label=0) samples: {self.duplicate_fake_times}")
 
         self.is_train = is_train

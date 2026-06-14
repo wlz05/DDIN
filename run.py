@@ -1,9 +1,9 @@
 # DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
 
 import os
-from utils.clip_dataloader import bert_data as weibo_data
-from utils.weibo21_clip_dataloader import bert_data as weibo21_data
-from model.DDIN import Trainer as DDINTrainer
+from utils.clipld import bert_data as weibo_data
+from utils.w21ld import bert_data as weibo21_data
+from model.net import Trainer as DDINTrainer
 
 class Run():
     def __init__(self, config):
@@ -39,7 +39,7 @@ class Run():
                 "Politics": 4, "International": 5, "Education": 6, "Entertainment": 7, "Society": 8
             }
         elif config['dataset'] == "weibo21":
-            self.root_path = './Weibo_21/'
+            self.root_path = './w21/'
             self.train_path = self.root_path + 'train_datasets.xlsx'
             self.val_path = self.root_path + 'val_datasets.xlsx'
             self.test_path = self.root_path + 'test_datasets.xlsx'
@@ -64,11 +64,11 @@ class Run():
             val_loader = loader.load_data(self.val_path, 'data/val_loader.pkl', 'data/val_clip_loader.pkl', False)
             test_loader = loader.load_data(self.test_path, 'data/test_loader.pkl', 'data/test_clip_loader.pkl', False)
         elif dataset == "weibo21":
-            train_loader = loader.load_data(self.train_path, 'Weibo_21/train_loader.pkl',
-                                            'Weibo_21/train_clip_loader.pkl', True)
-            val_loader = loader.load_data(self.val_path, 'Weibo_21/val_loader.pkl', 'Weibo_21/val_clip_loader.pkl',
+            train_loader = loader.load_data(self.train_path, 'w21/train_loader.pkl',
+                                            'w21/train_clip_loader.pkl', True)
+            val_loader = loader.load_data(self.val_path, 'w21/val_loader.pkl', 'w21/val_clip_loader.pkl',
                                           False)
-            test_loader = loader.load_data(self.test_path, 'Weibo_21/test_loader.pkl', 'Weibo_21/test_clip_loader.pkl',
+            test_loader = loader.load_data(self.test_path, 'w21/test_loader.pkl', 'w21/test_clip_loader.pkl',
                                            False)
 
         return train_loader, val_loader, test_loader

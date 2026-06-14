@@ -8,7 +8,7 @@
 # # from transformers import BertModel
 # # import torch.nn as nn
 # # # from positional_encodings.torch_encodings import PositionalEncoding1D
-# # import models_mae
+# # import mae
 # # from utils.utils_weibo import data2gpu, Averager, metrics, Recorder, clipdata2gpu
 # # from utils.utils_weibo import metricsTrueFalse
 # # from .layers import *
@@ -248,7 +248,7 @@
 
 
 # #         self.model_size = "base"
-# #         self.image_model = models_mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
+# #         self.image_model = mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
 # #         self.image_model.cuda()
 # #         checkpoint = torch.load('./mae_pretrain_vit_{}.pth'.format(self.model_size), map_location='cpu')
 # #         self.image_model.load_state_dict(checkpoint['model'], strict=False)
@@ -695,7 +695,7 @@
 # # import torch.nn as nn
 # # import torch.nn.functional as F # Ensure F is imported for F.softmax
 # # from transformers import BertModel, AutoTokenizer, AutoModel
-# # import models_mae # Domain specific
+# # import mae # Domain specific
 # # from utils.utils_weibo import clipdata2gpu, Averager, metricsTrueFalse, Recorder
 # # from .layers import MLP, MaskAttention, TokenAttention, cnn_extractor, LayerNorm, MLP_Mu, MLP_fusion, clip_fuion
 # # from .pivot import TransformerLayer, MLP_trans
@@ -877,7 +877,7 @@
 # #         # --- Image Encoder (MAE) ---
 # #         self.model_size = "base"
 # #         try:
-# #             self.image_model = models_mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
+# #             self.image_model = mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
 # #             # Loading checkpoint and moving to CUDA as in original domain_weibo.txt
 # #             checkpoint = torch.load('./mae_pretrain_vit_{}.pth'.format(self.model_size), map_location='cpu')
 # #             self.image_model.load_state_dict(checkpoint['model'], strict=False)
@@ -1267,7 +1267,7 @@
 # import torch.nn as nn
 # import torch.nn.functional as F  # Ensure F is imported for F.softmax
 # from transformers import BertModel, AutoTokenizer, AutoModel
-# import models_mae  # Domain specific
+# import mae  # Domain specific
 # from utils.utils_weibo import clipdata2gpu, Averager, metricsTrueFalse, Recorder
 # from .layers import MLP, MaskAttention, TokenAttention, cnn_extractor, LayerNorm, MLP_Mu, MLP_fusion, clip_fuion
 # from .pivot import TransformerLayer, MLP_trans
@@ -1447,7 +1447,7 @@
 #         # --- Image Encoder (MAE) ---
 #         self.model_size = "base"
 #         try:
-#             self.image_model = models_mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
+#             self.image_model = mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
 #             # Loading checkpoint and moving to CUDA as in original domain_weibo.txt
 #             checkpoint = torch.load('./mae_pretrain_vit_{}.pth'.format(self.model_size), map_location='cpu')
 #             self.image_model.load_state_dict(checkpoint['model'], strict=False)
@@ -1817,7 +1817,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel
-import models_mae
+import mae
 import torch.nn.functional as F
 import torch.nn as nn
 
@@ -1923,7 +1923,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         # --- Image Encoder (MAE) ---
         self.model_size = "base"
         try:
-            self.image_model = models_mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
+            self.image_model = mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
             checkpoint = torch.load(f'./mae_pretrain_vit_{self.model_size}.pth', map_location='cpu')
             self.image_model.load_state_dict(checkpoint['model'], strict=False)
             if torch.cuda.is_available(): self.image_model.cuda()
