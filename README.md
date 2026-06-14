@@ -224,7 +224,7 @@ python main.py \
 
 #### FineFake Dataset
 
-[FineFake](https://github.com/Accuser907/FineFake) is a large-scale multimodal fake news dataset that covers diverse news topics with text-image pairs. The project supports both the `gossip` (GossipCop-style entertainment news) and `politi` (PolitiFact-style political news) subsets.
+FineFake is a large-scale multimodal fake news dataset that covers diverse news topics with text-image pairs. The project supports both the `gossip` (GossipCop-style entertainment news) and `politi` (PolitiFact-style political news) subsets.
 
 ```
 ./FineFake_dataset/
