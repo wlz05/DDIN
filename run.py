@@ -1,7 +1,7 @@
 import os
 from utils.clip_dataloader import bert_data as weibo_data
 from utils.weibo21_clip_dataloader import bert_data as weibo21_data
-from model.DDIAN import Trainer as DDIANTrainer
+from model.DDIN import Trainer as DDINTrainer
 
 class Run():
     def __init__(self, config):
@@ -80,8 +80,8 @@ class Run():
     def main(self):
         train_loader, val_loader, test_loader = self.get_dataloader(self.dataset)
 
-        if self.model_name == 'DDIAN':  # DDIAN core model
-            trainer = DDIANTrainer(emb_dim=self.emb_dim, mlp_dims=self.mlp_dims, bert=self.bert,
+        if self.model_name == 'DDIN':  # DDIN core model
+            trainer = DDINTrainer(emb_dim=self.emb_dim, mlp_dims=self.mlp_dims, bert=self.bert,
                                     use_cuda=self.use_cuda, lr=self.lr, train_loader=train_loader, dropout=self.dropout,
                                     weight_decay=self.weight_decay, val_loader=val_loader, test_loader=test_loader,
                                     category_dict=self.category_dict, early_stop=self.early_stop, epoches=self.epoch,
