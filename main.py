@@ -1,5 +1,5 @@
 # -*-codeing = utf-8 -*-
-# DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 import os
 import argparse
