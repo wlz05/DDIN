@@ -7,90 +7,169 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 from transformers import BertTokenizer
 import torch
-import pandas as pd
 from torchvision import datasets, models, transforms
 import os
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageFile
+
+# 允许加载截断的图片
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 
 def read_image():
+    """读取图片并预处理，损坏图片用黑色占位图替代"""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
+    data_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
     for path in file_list:
-        data_transforms = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-            ])
+        if not os.path.exists(path):
+            print(f"[WARNING] Image directory not found: {path}, skipping...")
+            continue
 
-        for i, filename in enumerate(os.listdir(path)):  # assuming gif
-
-            # print(filename)
+        for i, filename in enumerate(os.listdir(path)):
             try:
                 im = Image.open(path + filename).convert('RGB')
                 im = data_transforms(im)
-                #im = 1
                 image_list[filename.split('/')[-1].split(".")[0].lower()] = im
-            except:
-                print("wrong"+filename)
-    print("image length " + str(len(image_list)))
-    #print("image names are " + str(image_list.keys()))
+            except Exception as e:
+                print(f"[WARNING] Corrupted image: {path}{filename}, using black placeholder. Error: {e}")
+                placeholder = torch.zeros(3, 224, 224)
+                image_list[filename.split('/')[-1].split(".")[0].lower()] = placeholder
+
+    print(f"[INFO] Loaded {len(image_list)} images total")
     return image_list
+
 
 def _init_fn(worker_id):
     np.random.seed(2024)
 
+
 def read_pkl(path):
-    with open(path,"rb")as f:
-        t = pickle.load(f)
-    return t
+    """安全读取 pickle 文件"""
+    try:
+        with open(path, "rb") as f:
+            t = pickle.load(f)
+        return t
+    except FileNotFoundError:
+        raise FileNotFoundError(f"[ERROR] Pickle file not found: {path}")
+    except (pickle.UnpicklingError, EOFError) as e:
+        raise ValueError(f"[ERROR] Corrupted pickle file: {path}, error: {e}")
+
+
 def df_filter(df_data):
+    """过滤无法确定类别的数据"""
     df_data = df_data[df_data['category'] != '无法确定']
     return df_data
 
-def word2input(texts,vocab_file,max_len):
+
+def word2input(texts, vocab_file, max_len):
+    """
+    BERT 文本分词，自动处理缺失/异常文本。
+    缺失或无效文本用空字符串替代，编码失败用零向量兜底。
+    """
+    if not os.path.exists(vocab_file):
+        raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
+
     tokenizer = BertTokenizer(vocab_file=vocab_file)
-    token_ids =[]
-    for i,text in enumerate(texts):
-        token_ids.append(tokenizer.encode(text, max_length=max_len, add_special_tokens=True, padding='max_length',
-                             truncation=True))
+    token_ids = []
+    skipped_count = 0
+
+    for i, text in enumerate(texts):
+        # 处理 None、NaN、非字符串
+        if text is None or (isinstance(text, float) and pd.isna(text)) or not isinstance(text, str):
+            skipped_count += 1
+            if skipped_count <= 5:
+                print(f"[WARNING] Text at index {i} is missing or invalid type ({type(text).__name__}), using empty string")
+            text = ""
+
+        text = text.strip()
+        if len(text) == 0:
+            text = " "
+
+        try:
+            encoded = tokenizer.encode(
+                text,
+                max_length=max_len,
+                add_special_tokens=True,
+                padding='max_length',
+                truncation=True
+            )
+            token_ids.append(encoded)
+        except Exception as e:
+            skipped_count += 1
+            if skipped_count <= 5:
+                print(f"[WARNING] Tokenizer failed for text at index {i}: '{str(text)[:50]}...', error: {e}")
+            token_ids.append([0] * max_len)
+
+    if skipped_count > 0:
+        print(f"[INFO] word2input: {skipped_count}/{len(texts)} texts were repaired with fallback")
+
     token_ids = torch.tensor(token_ids)
     masks = torch.zeros(token_ids.size())
-    for i,token in enumerate(token_ids):
+    for i, token in enumerate(token_ids):
         masks[i] = (token != 0)
-    return token_ids,masks
+    return token_ids, masks
+
 
 class bert_data():
-    def __init__(self,max_len, batch_size, vocab_file, category_dict, num_workers=2):
+    def __init__(self, max_len, batch_size, vocab_file, category_dict, num_workers=2):
         self.max_len = max_len
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.vocab_file = vocab_file
         self.category_dict = category_dict
 
-    def load_data(self,path,ttv,shuffle,text_only = False):
-        self.data = pd.read_csv(path,encoding='utf-8')
+    def load_data(self, path, ttv, shuffle, text_only=False):
+        # 读取 CSV
+        try:
+            self.data = pd.read_csv(path, encoding='utf-8')
+        except FileNotFoundError:
+            raise FileNotFoundError(f"[ERROR] Data CSV not found: {path}")
+        except Exception as e:
+            raise ValueError(f"[ERROR] Failed to read CSV {path}: {e}")
 
-        content = self.data['content'].astype('object').to_numpy()
-        label = torch.tensor(self.data['label'].astype('object').astype(int).to_numpy())
-        category = torch.tensor(self.data['category'].astype('object').apply(lambda c: self.category_dict[c]).to_numpy())
-        token_ids, masks = word2input(content,self.vocab_file,self.max_len)
-        ordered_image = pickle.load(open(ttv,'rb'))
-        datasets =TensorDataset(token_ids,
-                                masks,
-                                label,
-                                category,
-                                ordered_image
-                                #image_id_list,
-                                #post_id
+        # 验证列
+        required_cols = ['content', 'label', 'category']
+        missing_cols = [c for c in required_cols if c not in self.data.columns]
+        if missing_cols:
+            raise KeyError(f"[ERROR] Missing required columns in {path}: {missing_cols}")
+
+        # 移除缺失文本
+        original_len = len(self.data)
+        self.data = self.data.dropna(subset=['content'])
+        self.data['content'] = self.data['content'].fillna('').astype(str)
+        if len(self.data) < original_len:
+            print(f"[INFO] Dropped {original_len - len(self.data)} rows with missing content in {path}")
+
+        if len(self.data) == 0:
+            raise ValueError(f"[ERROR] No valid data after filtering in {path}")
+
+        content = self.data['content'].to_numpy()
+        label = torch.tensor(self.data['label'].astype(int).to_numpy())
+        category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
+        token_ids, masks = word2input(content, self.vocab_file, self.max_len)
+
+        # 安全加载 pickle
+        try:
+            ordered_image = pickle.load(open(ttv, 'rb'))
+        except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
+            raise ValueError(f"[ERROR] Failed to load pickle {ttv}: {e}")
+
+        datasets = TensorDataset(
+            token_ids, masks, label, category, ordered_image
         )
         dataloader = DataLoader(
-            dataset = datasets,
-            batch_size = self.batch_size,
-            num_workers = self.num_workers,
-            pin_memory = True,
-            shuffle = shuffle,
-            worker_init_fn = _init_fn
+            dataset=datasets,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=True,
+            shuffle=shuffle,
+            worker_init_fn=_init_fn
         )
+        print(f"[INFO] Dataloader created: {len(token_ids)} samples, batch_size={self.batch_size}")
         return dataloader

@@ -11,23 +11,25 @@ from PIL import Image
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 def read_image():
+    """读取图片并用CLIP预处理器处理，损坏图片用零向量替代"""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
     for path in file_list:
-        for i, filename in enumerate(os.listdir(path)):  # assuming gif
-
-            # print(filename)
+        if not os.path.exists(path):
+            print(f"[WARNING] Image directory not found: {path}, skipping...")
+            continue
+        for i, filename in enumerate(os.listdir(path)):
             try:
                 im = Image.open(path + filename)
                 im = preprocess(im).unsqueeze(0).to(device)
-                #im = 1
                 image_list[filename.split('/')[-1].split(".")[0].lower()] = im
-            except:
-                print("wrong"+filename)
-    print("image length " + str(len(image_list)))
-    #print("image names are " + str(image_list.keys()))
+            except Exception as e:
+                print(f"[WARNING] Corrupted image: {path}{filename}, using zero placeholder. Error: {e}")
+                placeholder = preprocess(Image.new('RGB', (224, 224), (0, 0, 0))).unsqueeze(0).to(device)
+                image_list[filename.split('/')[-1].split(".")[0].lower()] = placeholder
+    print(f"[INFO] Loaded {len(image_list)} images total")
     return image_list
 
 def _init_fn(worker_id):
