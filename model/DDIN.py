@@ -1,7 +1,7 @@
-# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
 
 """
-DDIN.py - DDIN: Domain-Aware Disentanglement Interaction Network
+DDIN.py - DDIN: Domain-aware Disentanglement Interaction Network
 整合版本 - 以第二份代码为准，第一份代码以注释形式保留
 """
 
@@ -201,7 +201,7 @@ class DomainAdaptiveWeighting(nn.Module):
 # =========================================================================
 class DDIN(nn.Module):
     """
-    DDIN: Domain-Aware Disentanglement Interaction Network
+    DDIN: Domain-aware Disentanglement Interaction Network
     多模态虚假新闻检测模型
     """
 
