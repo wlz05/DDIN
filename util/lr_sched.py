@@ -1,6 +1,6 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
-# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
 
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.

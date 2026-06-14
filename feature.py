@@ -1,4 +1,4 @@
-# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
 
 # python visualize_tsne.py --dataset weibo --batchsize 64
 
