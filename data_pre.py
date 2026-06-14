@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 import pickle
 def read_image():
-    """读取图片并预处理，损坏图片用黑色占位图替代"""
+    """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     for path in file_list:
@@ -48,11 +48,11 @@ def read_pkl(path):
         t = pickle.load(f)
     return t
 def df_filter(df_data):
-    df_data = df_data[df_data['category'] != '无法确定']
+    df_data = df_data[df_data['category'] != 'cannot determine']
     return df_data
 
 def word2input(texts, vocab_file, max_len):
-    """BERT 文本分词，自动处理缺失/异常文本"""
+    """BERT tokenization with automatic fallback for missing/invalid text.""""
     if not os.path.exists(vocab_file):
         raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
     tokenizer = BertTokenizer(vocab_file=vocab_file)
@@ -179,14 +179,14 @@ class bert_data():
             pickle.dump(ordered_image, file)
         return 1
 category_dict = {
-        "经济": 0,
-        "健康": 1,
-        "军事": 2,
-        "科学": 3,
-        "政治": 4,
-        "教育": 5,
-        "娱乐": 6,
-        "社会": 7
+        "Economy": 0,
+        "Health": 1,
+        "Military": 2,
+        "Science": 3,
+        "Politics": 4,
+        "Education": 5,
+        "Entertainment": 6,
+        "Society": 7
 }
 loader = bert_data(max_len=170, batch_size=64, vocab_file='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
                    category_dict=category_dict, num_workers=1)

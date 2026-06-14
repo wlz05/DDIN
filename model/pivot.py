@@ -595,7 +595,7 @@ class Beyond(Module):
         con_loss = text_con_loss + img_con_loss
         return con_loss
     def transpose_for_scores(self, x, attention_head_size):
-        # INPUT:  x'shape = [bs, seqlen, hid_size]  假设hid_size=128
+        # INPUT: x shape = [bs, seqlen, hid_size], assuming hid_size=128
         new_x_shape = x.size()[:-1] + (self.num_heads, attention_head_size)  # [bs, seqlen, 8, 16]
         x = x.view(*new_x_shape)  #
         return x.permute(0, 2, 1, 3)
@@ -626,7 +626,7 @@ class Beyond(Module):
 
 
 def perform(model, i, data):
-    tar, session_len, session_item, reversed_sess_item, mask, price_seqs, category_seqs = data.get_slice(i) # 得到一个batch里的数据
+    tar, session_len, session_item, reversed_sess_item, mask, price_seqs, category_seqs = data.get_slice(i)  # get one batch of data
     session_item = trans_to_cuda(torch.Tensor(session_item).long())
     session_len = trans_to_cuda(torch.Tensor(session_len).long())
     sess_price = trans_to_cuda(torch.Tensor(price_seqs).long())
@@ -669,7 +669,7 @@ def train_test(model, train_data, test_data):
     print('start training: ', datetime.datetime.now())
     torch.autograd.set_detect_anomaly(True)
     total_loss = 0.0
-    slices = train_data.generate_batch(model.batch_size) #将session随机打乱，每x个一组（#session/batch_size)
+    slices = train_data.generate_batch(model.batch_size)  # shuffle sessions into batches
     for i in slices:
         model.zero_grad()
         targets, scores, con_loss = perform(model, i, train_data)

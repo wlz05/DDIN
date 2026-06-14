@@ -35,8 +35,8 @@ class Run():
             self.val_path = self.root_path + 'val_origin.csv'
             self.test_path = self.root_path + 'test_origin.csv'
             self.category_dict = {
-                "经济": 0, "健康": 1, "军事": 2, "科学": 3,
-                "政治": 4, "国际": 5, "教育": 6, "娱乐": 7, "社会": 8
+                "Economy": 0, "Health": 1, "Military": 2, "Science": 3,
+                "Politics": 4, "International": 5, "Education": 6, "Entertainment": 7, "Society": 8
             }
         elif config['dataset'] == "weibo21":
             self.root_path = './Weibo_21/'
@@ -44,8 +44,8 @@ class Run():
             self.val_path = self.root_path + 'val_datasets.xlsx'
             self.test_path = self.root_path + 'test_datasets.xlsx'
             self.category_dict = {
-                "科技": 0, "军事": 1, "教育考试": 2, "灾难事故": 3,
-                "政治": 4, "医药健康": 5, "财经商业": 6, "文体娱乐": 7, "社会生活": 8
+                "Technology": 0, "Military": 1, "Education": 2, "Disaster": 3,
+                "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
 
     def get_dataloader(self, dataset):
