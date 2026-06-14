@@ -16,8 +16,8 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 logger = logging.getLogger(__name__)
 try:
-    from model.domain_weibo import MultiDomainPLEFENDModel
-    logger.info("Imported MultiDomainPLEFENDModel from model.domain_weibo.")
+    from model.weibo import MultiDomainPLEFENDModel
+    logger.info("Imported MultiDomainPLEFENDModel from model.weibo.")
 except ImportError as e:
     logger.error(f"Failed to import MultiDomainPLEFENDModel: {e}")
     exit()
@@ -55,7 +55,7 @@ if args.dataset == 'weibo':
 elif args.dataset == 'weibo21':
     # weibo21 already uses [384]
     config = {
-        'dataset': 'weibo21', 'model_name': 'domain_weibo', 'weibo21_data_dir': './Weibo_21/',
+        'dataset': 'weibo21', 'model_name': 'domain_weibo', 'weibo21_data_dir': './w21/',
         'bert_model_path_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch',
         'bert_vocab_file_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
         'batchsize': args.batchsize, 'max_len': 197, 'num_workers': 4, 'emb_dim': 768,

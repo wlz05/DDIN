@@ -11,7 +11,7 @@ import torch
 from positional_encodings.torch_encodings import PositionalEncoding1D, PositionalEncoding2D, PositionalEncodingPermute3D
 from transformers import BertModel
 import torch.nn as nn
-import models_mae
+import mae
 from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu
 from utils.utils import metricsTrueFalse
 from .layers import *
@@ -218,7 +218,7 @@ class DDIN(nn.Module):
         self.bert = BertModel.from_pretrained(bert_model_path)
 
         # MAE for local image features
-        self.mae = models_mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
+        self.mae = mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
         checkpoint = torch.load(mae_model_path, map_location='cpu')
         self.mae.load_state_dict(checkpoint['model'], strict=False)
 
@@ -610,13 +610,13 @@ class Trainer():
 # Original code design (run.py):
 
 # 1. Data loader design:
-#    - GossipCop: uses FakeNet_dataset + collate_fn_gossipcop
-#    - Weibo: uses utils.weibo_clip_dataloader.bert_data
-#    - Weibo21: uses utils.weibo21_clip_dataloader.bert_data
+#    - GossipCop: uses dataset + collate_fn_gossipcop
+#    - Weibo: uses utils.wloader.bert_data
+#    - Weibo21: uses utils.w21ld.bert_data
 #
 # 2. Trainer selection:
-#    - GossipCop: model.domain_gossipcop.Trainer
-#    - Weibo/Weibo21: model.domain_weibo.Trainer
+#    - GossipCop: model.gossip.Trainer
+#    - Weibo/Weibo21: model.weibo.Trainer
 #
 # 3. Configuration management:
 #    - All parameters passed via config dict

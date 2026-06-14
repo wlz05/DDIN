@@ -25,8 +25,8 @@ baned_hashing = set()
 rumor_root = 'E:/rumor_dataset/rumor_datasets/images/All images/'
 weibo_fake_root = 'E:/weibo/rumor_images/'
 weibo_real_root = 'E:/weibo/nonrumor_images/'
-weibo21_fake_root = 'E:/Weibo_21/rumor_images/'
-weibo21_real_root = 'E:/Weibo_21/nonrumor_images/'
+weibo21_fake_root = 'E:/w21/rumor_images/'
+weibo21_real_root = 'E:/w21/nonrumor_images/'
 
 
 mixset_xlsx = "./dataset/rumor_dataset/all_images.xlsx"
