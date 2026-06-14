@@ -10,22 +10,22 @@ from tqdm import tqdm
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name
 
-# 允许加载截断的图片
+# Allow loading truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# --- 路径配置 ---
+# --- Path config ---
 PKL_PATH = '/root/autodl-tmp/FineFake_dataset/FineFake.pkl'
 IMG_DIR = '/root/autodl-tmp/FineFake_dataset/'
 SAVE_IMAGE = '/root/autodl-tmp/FineFake_dataset/f_train_loader.pkl'
 SAVE_CLIP = '/root/autodl-tmp/FineFake_dataset/f_train_clip.pkl'
 
-# --- 加载模型 ---
+# --- Load model ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"正在加载 CLIP 模型到 {device}...")
+print(f"Loading CLIP model to {device}...")
 model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
 model.eval()
 
-# --- 读取数据 ---
+# --- Read data ---
 if not os.path.exists(PKL_PATH):
     raise FileNotFoundError(f"[ERROR] FineFake pickle not found: {PKL_PATH}")
 
@@ -38,19 +38,19 @@ features = []
 corrupted_count = 0
 missing_count = 0
 
-print(f"开始提取 {len(df)} 张图片的特征...")
+print(f"Extracting features for {len(df)} images...")
 
-# --- 循环处理 ---
+# --- Process loop ---
 for i, row in tqdm(df.iterrows(), total=len(df)):
     img_path = os.path.join(IMG_DIR, row['image_path'])
 
-    # 检查图片路径是否有效
+    # Check if image path is valid
     if 'image_path' not in row or pd.isna(row['image_path']):
         missing_count += 1
         features.append(np.zeros(512))
         continue
 
-    # 检查图片文件是否存在
+    # Check if file exists
     if not os.path.exists(img_path) or not os.path.isfile(img_path):
         missing_count += 1
         if missing_count <= 5:
@@ -70,7 +70,7 @@ for i, row in tqdm(df.iterrows(), total=len(df)):
             print(f"[WARNING] Failed to process image: {img_path}, error: {e}")
         features.append(np.zeros(512))
 
-# --- 保存结果 ---
+# --- Save results ---
 if missing_count > 0:
     print(f"[INFO] {missing_count} missing images replaced with zero vectors")
 if corrupted_count > 0:
@@ -86,4 +86,5 @@ try:
 except Exception as e:
     raise IOError(f"[ERROR] Failed to save feature files: {e}")
 
-print(f"\n✅ 特征提取完成！保存了 f_train_loader.pkl ({final_tensor.shape[0]} 张图片特征)")
+print(f"
+Feature extraction complete! Saved {final_tensor.shape[0]} image features.")

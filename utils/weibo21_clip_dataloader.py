@@ -15,7 +15,7 @@ from PIL import Image
 
 
 def read_image():
-    """读取图片并预处理，损坏图片用黑色占位图替代"""
+    """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     data_transforms = transforms.Compose([
@@ -37,7 +37,7 @@ def read_image():
                 image_list[filename.split('/')[-1].split(".")[0].lower()] = im
             except Exception as e:
                 print(f"[WARNING] Corrupted image: {path}{filename}, using black placeholder. Error: {e}")
-                # 黑色占位图
+                # Black placeholder
                 placeholder = torch.zeros(3, 224, 224)
                 image_list[filename.split('/')[-1].split(".")[0].lower()] = placeholder
 
@@ -50,7 +50,7 @@ def _init_fn(worker_id):
 
 
 def read_pkl(path):
-    """安全读取 pickle 文件"""
+    """Safely load a pickle file."""
     try:
         with open(path, "rb") as f:
             t = pickle.load(f)
@@ -62,17 +62,16 @@ def read_pkl(path):
 
 
 def df_filter(df_data):
-    """过滤无法确定类别的数据"""
-    df_data = df_data[df_data['category'] != '无法确定']
+    """Filter data with undetermined category."""
+    df_data = df_data[df_data['category'] != 'cannot determine']
     return df_data
 
 
 def word2input(texts, vocab_file, max_len):
     """
-    BERT 文本分词，自动处理缺失/异常文本。
-    缺失或无效文本用空字符串替代，编码失败用零向量兜底。
+    BERT tokenization with automatic fallback for missing/invalid text.
     """
-    # 检查词表文件
+    # Check vocab file
     if not os.path.exists(vocab_file):
         raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
 
@@ -81,14 +80,14 @@ def word2input(texts, vocab_file, max_len):
     skipped_count = 0
 
     for i, text in enumerate(texts):
-        # 处理 None、NaN、非字符串
+        # Handle None, NaN, non-string
         if text is None or (isinstance(text, float) and pd.isna(text)) or not isinstance(text, str):
             skipped_count += 1
             if skipped_count <= 5:
                 print(f"[WARNING] Text at index {i} is missing or invalid type ({type(text).__name__}), using empty string")
             text = ""
 
-        # 去除首尾空白，空字符串用单空格兜底避免 tokenizer 异常
+        # Trim whitespace, use single space for empty strings to avoid tokenizer errors
         text = text.strip()
         if len(text) == 0:
             text = " "
@@ -106,7 +105,7 @@ def word2input(texts, vocab_file, max_len):
             skipped_count += 1
             if skipped_count <= 5:
                 print(f"[WARNING] Tokenizer failed for text at index {i}: '{str(text)[:50]}...', error: {e}")
-            # 全零兜底
+            # Zero fallback
             token_ids.append([0] * max_len)
 
     if skipped_count > 0:
@@ -128,7 +127,7 @@ class bert_data():
         self.category_dict = category_dict
 
     def load_data(self, path, imagepath, clipimagepath, shuffle, text_only=False):
-        # 读取 Excel 数据文件
+        # Read Excel data file
         try:
             self.data = pd.read_excel(path)
         except FileNotFoundError:
@@ -136,13 +135,13 @@ class bert_data():
         except Exception as e:
             raise ValueError(f"[ERROR] Failed to read Excel {path}: {e}")
 
-        # 验证必要列存在
+        # Validate required columns
         required_cols = ['content', 'label', 'category']
         missing_cols = [c for c in required_cols if c not in self.data.columns]
         if missing_cols:
             raise KeyError(f"[ERROR] Missing required columns in {path}: {missing_cols}")
 
-        # 移除缺失文本的行
+        # Remove rows with missing text
         original_len = len(self.data)
         self.data = self.data.dropna(subset=['content'])
         self.data['content'] = self.data['content'].fillna('').astype(str)
@@ -155,15 +154,15 @@ class bert_data():
         device = "cuda" if torch.cuda.is_available() else "cpu"
         clipmodel, _ = load_from_name("ViT-B-16", device=device, download_root='./')
 
-        # 提取文本、标签、类别
+        # Extract text, labels, categories
         content = self.data['content'].to_numpy()
         label = torch.tensor(self.data['label'].astype(int).to_numpy())
         category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
 
-        # BERT 分词 (word2input 自带容错)
+        # BERT tokenization (word2input handles errors)
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        # 安全加载预计算的图片特征 pickle
+        # Safely load pre-computed image feature pickle
         try:
             ordered_image = pickle.load(open(imagepath, 'rb'))
         except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
@@ -174,7 +173,7 @@ class bert_data():
         except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
             raise ValueError(f"[ERROR] Failed to load CLIP image pickle {clipimagepath}: {e}")
 
-        # CLIP 文本分词 (容错处理)
+        # CLIP text tokenization (with fallback)
         try:
             clip_text = clip.tokenize(list(content))
         except Exception as e:
@@ -188,7 +187,7 @@ class bert_data():
                     clip_tokens.append(torch.zeros(77, dtype=torch.long))  # CLIP max context length
             clip_text = torch.stack(clip_tokens)
 
-        # 确保所有张量行数一致
+        # Ensure consistent row count across all tensors
         n_samples = len(token_ids)
         assert ordered_image.size(0) == n_samples, \
             f"Image pickle row count mismatch: {ordered_image.size(0)} vs {n_samples}"

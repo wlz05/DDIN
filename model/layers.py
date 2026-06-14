@@ -259,7 +259,7 @@ class ReverseLayerF(Function):
 
 
 # =========================================================================
-# DDIN 核心组件
+# DDIN Core Components
 # =========================================================================
 
 class MultiScaleProjectionLayer(nn.Module):
@@ -295,11 +295,11 @@ class GlobalGlobalInconsistency(nn.Module):
 
 
 class LocalLocalInconsistency(nn.Module):
-    """升级版：使用深度Cross-Attention替代BMM"""
+    """Enhanced: uses deep Cross-Attention instead of BMM."""
 
     def __init__(self, text_len, img_len, dim, num_heads=4, num_layers=2):
         super(LocalLocalInconsistency, self).__init__()
-        # 双向交叉注意力
+        # Bidirectional cross-attention
         self.text_to_img_attn = nn.ModuleList([
             nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, batch_first=True)
             for _ in range(num_layers)
@@ -313,7 +313,7 @@ class LocalLocalInconsistency(nn.Module):
         self.text_norms = nn.ModuleList([nn.LayerNorm(dim) for _ in range(num_layers)])
         self.img_norms = nn.ModuleList([nn.LayerNorm(dim) for _ in range(num_layers)])
 
-        # 冲突聚合
+        # Conflict aggregation
         self.conflict_aggregator = nn.Sequential(
             nn.Linear(dim * 2, dim),
             nn.GELU(),
@@ -324,7 +324,7 @@ class LocalLocalInconsistency(nn.Module):
     def forward(self, f_t_loc, f_i_loc):
         # f_t_loc: (batch, 197, dim), f_i_loc: (batch, 197, dim)
 
-        # 多层交叉注意力交互
+        # Multi-layer cross-attention interaction
         t_out = f_t_loc
         i_out = f_i_loc
 
@@ -340,23 +340,23 @@ class LocalLocalInconsistency(nn.Module):
             i_attn_out, _ = i2t_attn(i_out, t_out, t_out)
             i_out = i_norm(i_out + i_attn_out)
 
-        # 池化为全局冲突特征
+        # Pool to global conflict feature
         t_conflict = t_out.mean(dim=1)  # (batch, dim)
         i_conflict = i_out.mean(dim=1)  # (batch, dim)
 
-        # 融合双向冲突
+        # Fuse bidirectional conflicts
         conflict = torch.cat([t_conflict, i_conflict], dim=-1)
         return self.conflict_aggregator(conflict)
 
 
 class GlobalLocalInconsistency(nn.Module):
-    """高阶非线性交互：引入哈达玛积捕获二阶矛盾特征"""
+    """High-order nonlinear interaction: uses Hadamard product to capture second-order contradiction features."""
 
     def __init__(self, dim):
         super(GlobalLocalInconsistency, self).__init__()
         self.attn_T = nn.MultiheadAttention(embed_dim=dim, num_heads=4, batch_first=True)
         self.attn_I = nn.MultiheadAttention(embed_dim=dim, num_heads=4, batch_first=True)
-        # 修改：输入维度从 dim*2 改为 dim*3，以容纳哈达玛积
+        # Note: input dim changed from dim*2 to dim*3 for Hadamard product
         self.fc = nn.Sequential(
             nn.Linear(dim * 3, dim),
             nn.GELU(),
@@ -364,14 +364,14 @@ class GlobalLocalInconsistency(nn.Module):
         )
 
     def forward(self, f_t_loc, f_i_loc, f_t_glo, f_i_glo):
-        # 全局-局部交叉注意力
+        # Global-local cross-attention
         out_T, _ = self.attn_T(f_i_glo.unsqueeze(1), f_t_loc, f_t_loc)
         out_I, _ = self.attn_I(f_t_glo.unsqueeze(1), f_i_loc, f_i_loc)
 
         out_T = out_T.squeeze(1)  # (batch, dim)
         out_I = out_I.squeeze(1)  # (batch, dim)
 
-        # 高阶交互：拼接原始特征 + 哈达玛积（element-wise multiplication）
+        # High-order interaction: concat original features + Hadamard product
         hadamard = out_T * out_I  # (batch, dim)
         fused = torch.cat([out_T, out_I, hadamard], dim=-1)  # (batch, dim*3)
 
@@ -421,9 +421,9 @@ class SupervisedContrastiveLoss(nn.Module):
     def forward(self, features_text, features_image, labels):
         """
         Args:
-            features_text: (batch_size, dim) - 文本全局特征
-            features_image: (batch_size, dim) - 图像全局特征
-            labels: (batch_size,) - 真实标签 (0/1)
+            features_text: (batch_size, dim) - text global features
+            features_image: (batch_size, dim) - image global features
+            labels: (batch_size,) - ground truth labels (0/1)
         """
         batch_size = features_text.shape[0]
 
@@ -431,18 +431,18 @@ class SupervisedContrastiveLoss(nn.Module):
         features_text = F.normalize(features_text, dim=1)
         features_image = F.normalize(features_image, dim=1)
 
-        # 拼接文本和图像特征
+        # Concatenate text and image features
         features = torch.cat([features_text, features_image], dim=0)  # (2*batch, dim)
         labels = labels.contiguous().view(-1, 1)
         labels = torch.cat([labels, labels], dim=0)  # (2*batch, 1)
 
-        # 计算相似度矩阵
+        # Compute similarity matrix
         similarity_matrix = torch.matmul(features, features.T) / self.temperature
 
-        # 创建mask: 同类为正样本对
+        # Create mask: same-class pairs are positive
         mask = torch.eq(labels, labels.T).float().cuda()
 
-        # 去除自身
+        # Remove self
         logits_mask = torch.scatter(
             torch.ones_like(mask),
             1,
@@ -451,11 +451,11 @@ class SupervisedContrastiveLoss(nn.Module):
         )
         mask = mask * logits_mask
 
-        # 计算log_prob
+        # Compute log_prob
         exp_logits = torch.exp(similarity_matrix) * logits_mask
         log_prob = similarity_matrix - torch.log(exp_logits.sum(1, keepdim=True))
 
-        # 计算mean of log-likelihood over positive
+        # Compute mean log-likelihood over positives
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1).clamp(min=1)
 
         loss = -mean_log_prob_pos.mean()
