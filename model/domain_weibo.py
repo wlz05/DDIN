@@ -1,3 +1,5 @@
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 # #  baseline 代码    原版
 # # import os
 # # import tqdm

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# DDIN: Domain-Aware Disentanglement Interaction Network for Multimodal Fake News Detection
+
 """
 From scratch implementation of the famous ResNet models.
 The intuition for ResNet is simple and clear, but to code
