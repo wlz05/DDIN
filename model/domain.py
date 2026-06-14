@@ -9,22 +9,21 @@ import torch.nn.functional as F
 from transformers import BertModel, CLIPModel
 import logging
 
-# 从 utils.utils 导入所需的函数
-# 添加 calculate_metrics 和 metricsTrueFalse 到导入列表
+# Import required functions from utils.utils
 from utils.utils import (
     data2gpu,
     Averager,
-    metrics_original_weibo as metrics,  # 保持别名以兼容
+    metrics_original_weibo as metrics,  # keep alias for compatibility
     Recorder,
     clipdata2gpu,
-    calculate_metrics,  # <--- 新增导入
-    metricsTrueFalse  # <--- 新增导入 (Trainer.test 中会用到)
+    calculate_metrics,
+    metricsTrueFalse
 )
 
 logger = logging.getLogger(__name__)
 
 
-class AdaIN(nn.Module):  # 从 layers.py 移动到这里或确保 layers.py 中有定义
+class AdaIN(nn.Module):
     def __init__(self):
         super().__init__()
 

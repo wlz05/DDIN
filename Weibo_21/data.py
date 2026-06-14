@@ -16,9 +16,9 @@ def download_image(url, folder):
         filepath = os.path.join(folder, filename)
         with open(filepath, "wb") as file:
             file.write(response.content)
-        print(f"已保存图片: {filename}")
+        print(f"Saved image: {filename}")
     else:
-        print("无法下载图片，HTTP错误:", response.status_code)
+        print("Failed to download image, HTTP error:", response.status_code)
 
 for i in range(2):
     json_file = json_files[i]

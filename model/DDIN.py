@@ -2,7 +2,7 @@
 
 """
 DDIN.py - DDIN: Domain-aware Disentanglement Interaction Network
-整合版本 - 以第二份代码为准，第一份代码以注释形式保留
+Integrated version - primary implementation with original design notes preserved at the end
 """
 
 import os
@@ -24,7 +24,7 @@ import math
 
 
 # =========================================================================
-# FGM 对抗训练类
+# FGM Adversarial Training
 # =========================================================================
 class FGM():
     def __init__(self, model, epsilon=0.5):
@@ -50,7 +50,7 @@ class FGM():
 
 
 # =========================================================================
-# EMA (Exponential Moving Average) 类
+# EMA (Exponential Moving Average)
 # =========================================================================
 class EMA():
     def __init__(self, model, decay=0.999):
@@ -88,7 +88,7 @@ class EMA():
 
 
 # =========================================================================
-# Warmup + Cosine Annealing 学习率调度器
+# Warmup + Cosine Annealing Learning Rate Scheduler
 # =========================================================================
 class WarmupCosineAnnealingLR:
     def __init__(self, optimizer, warmup_epochs, max_epochs, eta_min=0):
@@ -113,11 +113,12 @@ class WarmupCosineAnnealingLR:
 
 
 # =========================================================================
-# 多尺度语义投影层 (Multi-Scale Semantic Projection Layer)
+# Multi-Scale Semantic Projection Layer
 # =========================================================================
 class MultiScaleSemanticProjection(nn.Module):
     """
-    多尺度语义投影层 - 通过多个并行投影通道捕获多义性
+    Multi-scale semantic projection layer - captures polysemy through
+    multiple parallel projection channels.
     """
 
     def __init__(self, input_dim, output_dim, num_scales=3):
@@ -139,11 +140,12 @@ class MultiScaleSemanticProjection(nn.Module):
 
 
 # =========================================================================
-# 层次化冲突协同感知网络 (Hierarchical Conflict Synergy Network)
+# Hierarchical Conflict Synergy Network
 # =========================================================================
 class HierarchicalConflictSynergy(nn.Module):
     """
-    层次化冲突协同机制 - 让不同粒度的冲突特征相互通信
+    Hierarchical conflict synergy - enables cross-granularity conflict
+    features to communicate with each other through a Transformer block.
     """
 
     def __init__(self, hidden_dim, num_heads=4):
@@ -157,19 +159,20 @@ class HierarchicalConflictSynergy(nn.Module):
         )
 
     def forward(self, conflict_ll, conflict_gl, conflict_gg):
-        # 将三种冲突特征堆叠为序列
+        # Stack the three conflict features into a sequence
         conflicts = torch.stack([conflict_ll, conflict_gl, conflict_gg], dim=1)  # [B, 3, D]
-        # 通过Transformer进行冲突传播
+        # Propagate conflicts through the Transformer
         synergized = self.transformer_block(conflicts)  # [B, 3, D]
         return synergized[:, 0], synergized[:, 1], synergized[:, 2]
 
 
 # =========================================================================
-# 领域自适应不一致性加权模块 (Domain-Adaptive Inconsistency Weighting)
+# Domain-Adaptive Inconsistency Weighting Module
 # =========================================================================
 class DomainAdaptiveWeighting(nn.Module):
     """
-    领域自适应加权 - 根据领域动态调整不同冲突的重要性
+    Domain-adaptive weighting - dynamically adjusts the importance of
+    different conflict signals based on the news domain.
     """
 
     def __init__(self, num_domains, hidden_dim):
@@ -178,16 +181,16 @@ class DomainAdaptiveWeighting(nn.Module):
         self.gate_network = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 3),  # 3个门控值对应LL, GL, GG
+            nn.Linear(hidden_dim // 2, 3),  # 3 gate values for LL, GL, GG
             nn.Softmax(dim=-1)
         )
 
     def forward(self, domain_ids, conflict_ll, conflict_gl, conflict_gg):
-        # 获取领域嵌入
+        # Get domain embeddings
         domain_emb = self.domain_embeddings(domain_ids)  # [B, D]
-        # 生成门控权重
+        # Generate gate weights
         gates = self.gate_network(domain_emb)  # [B, 3]
-        # 加权融合
+        # Weighted fusion
         weighted_conflict = (
                 gates[:, 0:1] * conflict_ll +
                 gates[:, 1:2] * conflict_gl +
@@ -197,12 +200,12 @@ class DomainAdaptiveWeighting(nn.Module):
 
 
 # =========================================================================
-# DDIN 主模型 (DDIN Model)
+# DDIN Main Model
 # =========================================================================
 class DDIN(nn.Module):
     """
     DDIN: Domain-aware Disentanglement Interaction Network
-    多模态虚假新闻检测模型
+    Multimodal fake news detection model.
     """
 
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
@@ -210,7 +213,7 @@ class DDIN(nn.Module):
         super(DDIN, self).__init__()
         self.dropout = dropout
 
-        # ===== (a) 双流多粒度特征提取 =====
+        # ===== (a) Dual-Stream Multi-Granularity Feature Extraction =====
         # BERT for local text features
         self.bert = BertModel.from_pretrained(bert_model_path)
 
@@ -222,13 +225,13 @@ class DDIN(nn.Module):
         # CLIP for global features
         self.clip_model, _ = load_from_name(clip_model_name, download_root='./model_weights/clip_cn/')
 
-        # ===== (b) 多尺度语义投影层 =====
+        # ===== (b) Multi-Scale Semantic Projection Layers =====
         self.text_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.image_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.text_global_proj = MultiScaleSemanticProjection(512, hidden_dim, num_scales=3)
         self.image_global_proj = MultiScaleSemanticProjection(512, hidden_dim, num_scales=3)
 
-        # ===== (c) 多粒度跨模态不一致性挖掘 =====
+        # ===== (c) Multi-Granularity Cross-Modal Inconsistency Mining =====
         # Global-Global Inconsistency
         self.gg_inconsistency = nn.Sequential(
             nn.Linear(hidden_dim * 3, hidden_dim),
@@ -254,13 +257,13 @@ class DDIN(nn.Module):
             norm_layer=nn.LayerNorm
         )
 
-        # ===== (d) 层次化冲突协同感知网络 =====
+        # ===== (d) Hierarchical Conflict Synergy Network =====
         self.conflict_synergy = HierarchicalConflictSynergy(hidden_dim, num_heads=4)
 
-        # ===== (e) 领域自适应不一致性加权与融合 =====
+        # ===== (e) Domain-Adaptive Inconsistency Weighting & Fusion =====
         self.domain_weighting = DomainAdaptiveWeighting(num_domains, hidden_dim)
 
-        # ===== (f) 领域自适应多模态全局融合 =====
+        # ===== (f) Domain-Adaptive Multimodal Global Fusion =====
         self.final_fusion = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim * 2),
             nn.ReLU(),
@@ -268,20 +271,20 @@ class DDIN(nn.Module):
             nn.Linear(hidden_dim * 2, hidden_dim)
         )
 
-        # 分类器
+        # Classifier
         self.classifier = nn.Linear(hidden_dim, num_classes)
 
-        # 辅助分类器 (用于多任务学习)
+        # Auxiliary classifiers (for multi-task learning)
         self.fusion_classifier = nn.Linear(hidden_dim, num_classes)
         self.image_classifier = nn.Linear(hidden_dim, num_classes)
         self.text_classifier = nn.Linear(hidden_dim, num_classes)
 
     def forward(self, content, content_masks, image, category, **kwargs):
-        # 从 kwargs 获取 CLIP 专用输入
+        # Get CLIP-specific inputs from kwargs
         clip_text = kwargs.get('clip_text', content)
         clip_image = kwargs.get('clip_image', image)
 
-        # ===== 特征提取 =====
+        # ===== Feature Extraction =====
         # Local text features (BERT)
         bert_output = self.bert(content, attention_mask=content_masks)
         text_local = bert_output.last_hidden_state  # [B, L, 768]
@@ -295,13 +298,13 @@ class DDIN(nn.Module):
         text_global = self.clip_model.encode_text(clip_text)  # [B, 512]
         image_global = self.clip_model.encode_image(clip_image)  # [B, 512]
 
-        # ===== 多尺度语义投影 =====
+        # ===== Multi-Scale Semantic Projection =====
         text_local_proj = self.text_local_proj(text_local.mean(dim=1))  # [B, D]
         image_local_proj = self.image_local_proj(image_local.mean(dim=1))  # [B, D]
         text_global_proj = self.text_global_proj(text_global)  # [B, D]
         image_global_proj = self.image_global_proj(image_global)  # [B, D]
 
-        # ===== 多粒度跨模态不一致性挖掘 =====
+        # ===== Multi-Granularity Cross-Modal Inconsistency Mining =====
         # 1. Global-Global Inconsistency
         gg_concat = torch.cat([
             text_global_proj,
@@ -316,7 +319,7 @@ class DDIN(nn.Module):
         )
         row_max = attn_weights.max(dim=-1)[0]  # [B, L]
         col_max = attn_weights.max(dim=-2)[0]  # [B, P]
-        # 简化处理：取平均
+        # Simplified: take the mean over all positions
         ll_features = torch.stack([row_max.mean(dim=1), col_max.mean(dim=1)], dim=1)  # [B, 2]
         conflict_ll = self.ll_inconsistency(ll_features.unsqueeze(-1)).squeeze(-1)  # [B, D]
 
@@ -324,26 +327,26 @@ class DDIN(nn.Module):
         gl_concat = torch.stack([text_global_proj, image_local_proj], dim=1)  # [B, 2, D]
         conflict_gl = self.gl_cross_transformer(gl_concat).mean(dim=1)  # [B, D]
 
-        # ===== 层次化冲突协同 =====
+        # ===== Hierarchical Conflict Synergy =====
         conflict_ll_syn, conflict_gl_syn, conflict_gg_syn = self.conflict_synergy(
             conflict_ll, conflict_gl, conflict_gg
         )
 
-        # ===== 领域自适应加权 =====
+        # ===== Domain-Adaptive Weighting =====
         adaptive_conflict, gate_weights = self.domain_weighting(
             category, conflict_ll_syn, conflict_gl_syn, conflict_gg_syn
         )
 
-        # ===== 全局融合 =====
+        # ===== Global Fusion =====
         fusion_input = torch.cat([
             text_global_proj,
             image_global_proj,
             adaptive_conflict,
-            text_global_proj * image_global_proj  # 交互特征
+            text_global_proj * image_global_proj  # interaction features
         ], dim=-1)
         fused_features = self.final_fusion(fusion_input)  # [B, D]
 
-        # ===== 分类 =====
+        # ===== Classification =====
         final_pred = self.classifier(fused_features)
         fusion_pred = self.fusion_classifier(adaptive_conflict)
         image_pred = self.image_classifier(image_global_proj)
@@ -354,12 +357,12 @@ class DDIN(nn.Module):
 
 
 # =========================================================================
-# 对比损失 (Contrastive Loss)
+# Contrastive Loss
 # =========================================================================
 class AdaptiveContrastiveLoss(nn.Module):
     """
-    自适应对比损失 - 用于增强跨模态一致性学习
-    使用 log_softmax 避免 exp 数值溢出，排除自身配对
+    Adaptive contrastive loss - enhances cross-modal consistency learning.
+    Uses log_softmax for numerical stability and excludes self-pairs.
     """
 
     def __init__(self, temperature=0.07):
@@ -367,22 +370,22 @@ class AdaptiveContrastiveLoss(nn.Module):
         self.temperature = temperature
 
     def forward(self, text_features, image_features, labels):
-        # 归一化
+        # Normalize
         text_features = nn.functional.normalize(text_features, dim=-1)
         image_features = nn.functional.normalize(image_features, dim=-1)
 
-        # 计算相似度矩阵 [B, B]
+        # Compute similarity matrix [B, B]
         similarity = torch.matmul(text_features, image_features.T) / self.temperature
 
-        # 构建正例掩码（排除自身）
+        # Build positive mask (exclude self)
         labels = labels.view(-1, 1)
         pos_mask = (labels == labels.T).float()
-        pos_mask.fill_diagonal_(0.0)  # 排除自身配对
+        pos_mask.fill_diagonal_(0.0)  # exclude self-pairs
 
-        # 使用 log_softmax 保证数值稳定
+        # Use log_softmax for numerical stability
         log_prob = similarity.log_softmax(dim=1)
 
-        # 平均正例对的 log 概率
+        # Average log-probability of positive pairs
         pos_sum = (log_prob * pos_mask).sum(dim=1)
         pos_count = pos_mask.sum(dim=1).clamp(min=1)
         loss = -(pos_sum / pos_count).mean()
@@ -391,7 +394,7 @@ class AdaptiveContrastiveLoss(nn.Module):
 
 
 # =========================================================================
-# Trainer 类
+# Trainer Class
 # =========================================================================
 class Trainer():
     def __init__(self, emb_dim, mlp_dims, bert, use_cuda, lr, dropout,
@@ -416,7 +419,7 @@ class Trainer():
         self.use_ema = use_ema
         self.contrastive_weight = contrastive_weight
 
-        # 初始化模型
+        # Initialize model
         num_domains = len(category_dict)
         self.model = DDIN(
             bert_model_path=bert,
@@ -433,11 +436,11 @@ class Trainer():
         if self.use_cuda:
             self.model = self.model.cuda()
 
-        # 损失函数
+        # Loss functions
         self.criterion = nn.CrossEntropyLoss()
         self.contrastive_loss = AdaptiveContrastiveLoss()
 
-        # 优化器 - 分层学习率
+        # Optimizer - layer-wise learning rates (BERT: 0.1x base LR)
         bert_params = list(self.model.bert.parameters())
         other_params = [p for n, p in self.model.named_parameters()
                         if 'bert' not in n]
@@ -447,7 +450,7 @@ class Trainer():
             {'params': other_params, 'lr': lr}
         ], weight_decay=weight_decay)
 
-        # 学习率调度器
+        # Learning rate scheduler
         self.scheduler = WarmupCosineAnnealingLR(
             self.optimizer,
             warmup_epochs=3,
@@ -459,17 +462,17 @@ class Trainer():
         if logger:
             logger.info('Start training...')
 
-        # 确保保存目录存在
+        # Ensure save directory exists
         os.makedirs(self.save_param_dir, exist_ok=True)
 
-        # 初始化FGM和EMA
+        # Initialize FGM and EMA
         fgm = FGM(self.model, epsilon=0.5) if self.use_fgm else None
         ema = EMA(self.model, decay=0.999) if self.use_ema else None
 
         recorder = Recorder(self.early_stop)
 
         for epoch in range(self.epoches):
-            # 学习率调度 (先调度再训练，避免warmup延迟一轮)
+            # LR scheduling (schedule before training to avoid warmup lag)
             self.scheduler.step()
             self.model.train()
             avg_loss = Averager()
@@ -484,11 +487,11 @@ class Trainer():
 
                 self.optimizer.zero_grad()
 
-                # 前向传播
+                # Forward pass
                 final_pred, fusion_pred, image_pred, text_pred, \
                     fused_feat, adaptive_conflict, text_feat, image_feat = self.model(**batch_data)
 
-                # 分类损失
+                # Classification loss
                 cls_loss = (
                         self.criterion(final_pred, batch_label) +
                         0.5 * self.criterion(fusion_pred, batch_label) +
@@ -496,15 +499,15 @@ class Trainer():
                         0.3 * self.criterion(text_pred, batch_label)
                 )
 
-                # 自适应对比损失
+                # Adaptive contrastive loss
                 adaptive_con_loss = self.contrastive_loss(text_feat, image_feat, batch_label)
                 batch_adaptive_weight = torch.tensor([self.contrastive_weight]).to(batch_label.device)
 
-                # 总损失
+                # Total loss
                 loss = cls_loss + batch_adaptive_weight * adaptive_con_loss
                 loss.backward()
 
-                # FGM对抗训练
+                # FGM adversarial training
                 if self.use_fgm and fgm:
                     fgm.attack()
                     final_pred_adv, fusion_pred_adv, image_pred_adv, text_pred_adv, \
@@ -523,7 +526,7 @@ class Trainer():
                     loss_adv.backward()
                     fgm.restore()
 
-                # 统一梯度裁剪（包含clean + adversarial梯度）
+                # Unified gradient clipping (clean + adversarial gradients)
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                 self.optimizer.step()
                 if self.use_ema and ema:
@@ -559,7 +562,7 @@ class Trainer():
             else:
                 continue
 
-        # 加载最佳EMA checkpoint (checkpoint已包含EMA权重，直接使用)
+        # Load best EMA checkpoint (checkpoint already contains EMA weights, use directly)
         self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl')))
         results0, results1, results2, results3 = self.test(self.test_loader)
         if logger:
@@ -601,33 +604,33 @@ class Trainer():
 
 
 # =========================================================================
-# 第一份代码的注释版本 (保留原有思路)
+# Original Design Notes (preserved for reference)
 # =========================================================================
 """
-# 原版代码思路 (run.py):
-# 
-# 1. 数据加载器设计:
-#    - GossipCop: 使用 FakeNet_dataset + collate_fn_gossipcop
-#    - Weibo: 使用 utils.weibo_clip_dataloader.bert_data
-#    - Weibo21: 使用 utils.weibo21_clip_dataloader.bert_data
+# Original code design (run.py):
+
+# 1. Data loader design:
+#    - GossipCop: uses FakeNet_dataset + collate_fn_gossipcop
+#    - Weibo: uses utils.weibo_clip_dataloader.bert_data
+#    - Weibo21: uses utils.weibo21_clip_dataloader.bert_data
 #
-# 2. Trainer选择:
+# 2. Trainer selection:
 #    - GossipCop: model.domain_gossipcop.Trainer
 #    - Weibo/Weibo21: model.domain_weibo.Trainer
 #
-# 3. 配置管理:
-#    - 通过config字典传递所有参数
-#    - 支持不同数据集的路径配置
-#    - 支持BERT/CLIP模型路径配置
+# 3. Configuration management:
+#    - All parameters passed via config dict
+#    - Supports dataset-specific path configuration
+#    - Supports BERT/CLIP model path configuration
 #
-# 4. 训练流程:
-#    - Run类负责数据加载和Trainer初始化
-#    - Trainer类负责具体的训练和测试
-#    - 支持early stopping和模型保存
+# 4. Training pipeline:
+#    - Run class handles data loading and Trainer initialization
+#    - Trainer class handles the actual training and testing
+#    - Supports early stopping and model checkpointing
 #
-# 5. 关键特性:
-#    - Logger日志记录
-#    - 异常处理和错误提示
-#    - 模块化设计便于扩展
-#    - 支持多数据集和多模型
+# 5. Key features:
+#    - Logger-based logging
+#    - Exception handling and error messages
+#    - Modular design for easy extension
+#    - Supports multiple datasets and models
 """

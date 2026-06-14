@@ -1,6 +1,6 @@
 # DDIN: Domain-aware Disentanglement Interaction Network for Multimodal Fake News Detection
 
-# #  baseline 代码    原版
+# # baseline code (original)
 # # import os
 # # import tqdm
 # # import torch
@@ -462,7 +462,7 @@
 # #             fusion_gate_out_list.append(gate_out)
 # #         self.fusion_gate_out_list = fusion_gate_out_list
 
-# #         # 文本模态
+# #         # Text modality
 # #         text_gate_expert_value = []
 # #         text_experts_feature = 0
 # #         text_gate_share_expert_value = []
@@ -486,7 +486,7 @@
 # #         text_gate_expert_value.append(text_experts_feature1)
 
 
-# #         # 图像模态
+# #         # Image modality
 # #         image_gate_expert_value = []
 # #         image_experts_feature = 0
 # #         image_gate_share_expert_value = []
@@ -510,7 +510,7 @@
 # #         image_gate_expert_value.append(image_experts_feature1)
 
 
-# #         # 融合模态
+# #         # Fusion modality
 # #         text = text_gate_share_expert_value[0]
 # #         image = image_gate_share_expert_value[0]
 # #         fusion_share_feature = torch.cat((clip_fusion_feature, text, image), dim=-1)
@@ -526,7 +526,7 @@
 # #         self.fusion_gate_out_list0 = fusion_gate_out_list0
 
 
-# #         # 融合模态
+# #         # Fusion modality
 # #         fusion_gate_expert_value0 = []
 # #         fusion_experts_feature = 0
 # #         fusion_gate_share_expert_value0 = []
@@ -554,12 +554,12 @@
 # #         fusion_gate_expert_value0.append(fusion_experts_feature1)
 
 
-# #         # 每个模态的特征
+# #         # Features per modality
 # #         text_features = text_gate_expert_value[0]
 # #         image_features = image_gate_expert_value[0]
 # #         fusion_features = fusion_gate_expert_value0[0]
 
-# #         # 多视角
+# #         # Multi-view
 # #         text_fake_news_logits = self.text_classifier(text_features).squeeze(1)
 # #         image_fake_news_logits = self.image_classifier(image_features).squeeze(1)
 # #         fusion_fake_news_logits = self.fusion_classifier(fusion_features).squeeze(1)
@@ -569,11 +569,11 @@
 # #         fusion_fake_news = torch.sigmoid(fusion_fake_news_logits)
 
 
-# #         # 多模态融合
+# #         # Multimodal fusion
 # #         all_modility = text_features + image_features + fusion_features
 
 
-# #         # 虚假新闻检测任务经过 sigmoid
+# #         # Fake news detection via sigmoid
 # #         fake_news_sigmoid = torch.sigmoid(self.max_classifier(all_modility).squeeze(1))
 
 # #         return fake_news_sigmoid, text_fake_news, image_fake_news, fusion_fake_news
@@ -637,7 +637,7 @@
 # #                 loss0 = loss_fn(label0,label.float())
 
 
-# #                 # 虚假新闻检测的辅助任务
+# #                 # Auxiliary fake news detection task
 # #                 loss12 = loss_fn(text_fake_news,label.float())
 # #                 loss22 = loss_fn(image_fake_news, label.float())
 # #                 loss32 = loss_fn(fusion_fake_news, label.float())
@@ -661,9 +661,9 @@
 # #             else:
 # #                 continue
 # #         self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_clip111.pkl')))
-# #         print("开始进行最后的测试: ")
+# #         print("Running final test: ")
 # #         results0 = self.test(self.test_loader)
-# #         print("最后的结果", results0)
+# #         print("Final results", results0)
 
 # #         return results0, os.path.join(self.save_param_dir, 'parameter_clip111.pkl')
 
@@ -1214,9 +1214,9 @@
 # #         else:
 # #             print(f"Warning: Model file {final_model_path} not found for final testing. Using current model state.")
 
-# #         print("开始进行最后的测试: ")
+# #         print("Running final test: ")
 # #         final_test_results = self.test(self.test_loader)
-# #         print("最后的结果", final_test_results)
+# #         print("Final results", final_test_results)
 
 # #         return final_test_results, final_model_path
 
@@ -1475,7 +1475,7 @@
 #         self.reasoning_emb_dim = reasoning_emb_dim
 #         self.num_manipulation_classes = num_manipulation_classes
 
-#         # 将最终分类器前的特征（dim 320）投射到reasoning嵌入空间
+#         # Project pre-classifier features (dim 320) to reasoning embedding space
 #         self.project_reasoning_text = MLP(feature_dim_after_experts, [self.reasoning_emb_dim], dropout)
 #         self.project_reasoning_image = MLP(feature_dim_after_experts, [self.reasoning_emb_dim], dropout)
 #         self.project_reasoning_cross = MLP(feature_dim_after_experts, [self.reasoning_emb_dim], dropout)
@@ -1604,7 +1604,7 @@
 #         final_fake_news_prob = torch.sigmoid(final_fake_news_logits)  # This is the main prediction
 
 #         # --- START: GENERATE REASONING EMBEDDINGS (MODIFIED/ADDED) ---
-#         # 使用组合后的特征作为输入，生成用于蒸馏的reasoning嵌入
+#         # Use combined features as input to generate reasoning embeddings for distillation
 #         pred_reasoning_text_emb = self.project_reasoning_text(all_modality_combined)
 #         pred_reasoning_image_emb = self.project_reasoning_image(all_modality_combined)
 #         pred_reasoning_cross_emb = self.project_reasoning_cross(all_modality_combined)
@@ -1634,7 +1634,7 @@
 #                  reasoning_emb_dim=768,
 #                  num_manipulation_classes=0,
 #                  lambda_reasoning_align=0.1,
-#                  lambda_manipulation_predict=0, # <--- 在这里添加缺失的参数，并可以给一个默认值
+#                  lambda_manipulation_predict=0, # <--- add missing parameter here with a default value
 #                  early_stop=100, epoches=100
 #                  ):
 #         self.lr = lr
@@ -1712,13 +1712,13 @@
 #                 loss_detection_tasks = loss0 + (loss12 + loss22 + loss32) / 3.0
 
 #                 # --- 2. Reasoning Distillation Loss (MODIFIED/ADDED) ---
-#                 # 从数据加载器获取teacher reasoning embeddings
+#                 # Get teacher reasoning embeddings from dataloader
 #                 teacher_r_text_emb = batch_data.get('teacher_reasoning_text_emb')
 #                 teacher_r_image_emb = batch_data.get('teacher_reasoning_image_emb')
 #                 teacher_r_cross_emb = batch_data.get('teacher_reasoning_cross_emb')
 
 #                 loss_align = torch.tensor(0.0, device=labels_main_task.device)
-#                 # 确保teacher embeddings存在，才计算蒸馏损失
+#                 # Only compute distillation loss if teacher embeddings exist
 #                 if teacher_r_text_emb is not None and \
 #                    teacher_r_image_emb is not None and \
 #                    teacher_r_cross_emb is not None:
@@ -1735,7 +1735,7 @@
 #                         loss_manip = self.ce_loss(manip_pred_logits, manip_labels.long())
 
 #                 # --- 3. Total Loss (MODIFIED/ADDED) ---
-#                 # 总损失 = 分类损失 + 加权的蒸馏损失
+#                 # Total loss = classification loss + weighted distillation loss
 #                 total_loss = loss_detection_tasks + self.lambda_reasoning_align * loss_align + self.lambda_manipulation_predict * loss_manip
 
 #                 # --- Backpropagation ---
@@ -1767,9 +1767,9 @@
 #         else:
 #             print(f"Warning: Model file {final_model_path} not found for final testing. Using current model state.")
 
-#         print("开始进行最后的测试: ")
+#         print("Running final test: ")
 #         final_test_results = self.test(self.test_loader)
-#         print("最后的结果", final_test_results)
+#         print("Final results", final_test_results)
 
 #         return final_test_results, final_model_path
 
@@ -1978,7 +1978,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         return expert_outputs_sum, shared_expert_outputs_sum
 
     def forward(self, **kwargs):
-        self.ClipModel = self.ClipModel.float()  # 强制 CLIP 进入单精度模式
+        self.ClipModel = self.ClipModel.float()  # Force CLIP into single-precision mode
         inputs = kwargs['content']
         masks = kwargs['content_masks']
         image_raw = kwargs['image']
@@ -2037,10 +2037,10 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         F_prime_cross = F_cross + P_delta_cross
 
         # =====================================================================
-        # --- [核心修改] 模态随机丢弃 (Modality Dropout) 防过拟合、防偏科 ---
-        # 仅在训练阶段(self.training)生效，以10%的概率屏蔽某一个模态
+        # --- CORE CHANGE: Modality Dropout to prevent overfitting and modality bias ---
+        # Only active during training, masks one modality with 10% probability
         if self.training:
-            # 随机遮罩：90%概率保留(乘1)，10%概率丢弃(乘0)，除以0.9是为了保持数值量级平衡
+            # Random mask: 90% keep (multiply by 1), 10% drop (multiply by 0), divide by 0.9 for magnitude balance
             text_drop_mask = (torch.rand(F_prime_text.size(0), 1, device=F_prime_text.device) > 0.1).float() / 0.9
             F_prime_text = F_prime_text * text_drop_mask
 

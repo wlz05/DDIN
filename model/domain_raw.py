@@ -68,7 +68,7 @@ class TripleModalFusionNetwork(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-        # 三模态特征交互
+        # Three-modal feature interaction
         self.modal_interactions = nn.Sequential(
             nn.Linear(input_dim * 3, input_dim),
             nn.GELU(),
@@ -76,7 +76,7 @@ class TripleModalFusionNetwork(nn.Module):
             nn.GELU(),
         )
 
-        # 自适应模态权重网络
+        # Adaptive modality weight network
         self.weight_network = nn.Sequential(
             nn.Linear(input_dim * 3, input_dim),
             nn.GELU(),
@@ -84,26 +84,26 @@ class TripleModalFusionNetwork(nn.Module):
             nn.Softmax(dim=1)
         )
 
-        # 最终融合层
+        # Final fusion layer
         self.fusion_layer = nn.Linear(input_dim * 3, output_dim)
 
     def forward(self, image, text, fused):
-        # 输入模态：[batch_size, 320]
+        # Input modality: [batch_size, 320]
         modal_stack = torch.cat([image, text, fused], dim=1)  # [batch_size, 960]
 
-        # 计算模态交互特征
+        # Compute modality interaction features
         interaction = self.modal_interactions(modal_stack)  # [batch_size, 320]
 
-        # 计算自适应模态权重
+        # Compute adaptive modality weights
         weights = self.weight_network(modal_stack)  # [batch_size, 3]
         weights = weights.unsqueeze(2)  # [batch_size, 3, 1]
 
-        # 加权融合模态
+        # Weighted modality fusion
         image_weighted = image * weights[:, 0]
         text_weighted = text * weights[:, 1]
         fused_weighted = fused * weights[:, 2]
 
-        # 融合加权后的模态
+        # Fuse weighted modalities
         fused_feature = torch.cat([image_weighted, text_weighted, fused_weighted], dim=1)
         fused_feature = self.fusion_layer(fused_feature)  # [batch_size, 320]
 
@@ -466,7 +466,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         self.tau = 0.5
 
-        # 多模态融合
+        # Multimodal fusion
         self.fusion_model = TripleModalFusionNetwork(320, 320)
 
     def forward(self, **kwargs):
@@ -514,7 +514,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             fusion_gate_out_list.append(gate_out)
         self.fusion_gate_out_list = fusion_gate_out_list
 
-        # 文本模态
+        # Text modality
         text_gate_expert_value = []
         text_experts_feature = 0
         text_gate_share_expert_value = []
@@ -537,7 +537,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         text_gate_expert_value.append(text_experts_feature0)
         text_gate_expert_value.append(text_experts_feature1)
 
-        # 图像模态
+        # Image modality
         image_gate_expert_value = []
         image_experts_feature = 0
         image_gate_share_expert_value = []
@@ -560,7 +560,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         image_gate_expert_value.append(image_experts_feature0)
         image_gate_expert_value.append(image_experts_feature1)
 
-        # 融合模态
+        # Fusion modality
         text = text_gate_share_expert_value[0]
         image = image_gate_share_expert_value[0]
         fusion_share_feature = torch.cat((clip_fusion_feature, text, image), dim=-1)
@@ -574,7 +574,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             fusion_gate_out_list0.append(gate_out)
         self.fusion_gate_out_list0 = fusion_gate_out_list0
 
-        # 融合模态
+        # Fusion modality
         fusion_gate_expert_value0 = []
         fusion_experts_feature = 0
         fusion_gate_share_expert_value0 = []
@@ -601,12 +601,12 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         fusion_gate_expert_value0.append(fusion_experts_feature0)
         fusion_gate_expert_value0.append(fusion_experts_feature1)
 
-        # 每个模态的特征
+        # Features per modality
         text_features = text_gate_expert_value[0]
         image_features = image_gate_expert_value[0]
         fusion_features = fusion_gate_expert_value0[0]
 
-        # 多视角
+        # Multi-view
         text_fake_news_logits = self.text_classifier(text_features).squeeze(1)
         image_fake_news_logits = self.image_classifier(image_features).squeeze(1)
         fusion_fake_news_logits = self.fusion_classifier(fusion_features).squeeze(1)
@@ -615,11 +615,11 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         image_fake_news = torch.sigmoid(image_fake_news_logits)
         fusion_fake_news = torch.sigmoid(fusion_fake_news_logits)
 
-        # 多模态融合
+        # Multimodal fusion
         # all_modility = text_features + image_features + fusion_features
         all_modility = self.fusion_model(text_features, image_features, fusion_features)
 
-        # 虚假新闻检测任务经过 sigmoid
+        # Fake news detection via sigmoid
         fake_news_sigmoid = torch.sigmoid(self.max_classifier(all_modility).squeeze(1))
 
         return fake_news_sigmoid, text_fake_news, image_fake_news, fusion_fake_news
@@ -682,7 +682,7 @@ class Trainer():
                 label0, text_fake_news, image_fake_news, fusion_fake_news = self.model(**batch_data)
                 loss0 = loss_fn(label0, label.float())
 
-                # 虚假新闻检测的辅助任务
+                # Auxiliary fake news detection task
                 loss12 = loss_fn(text_fake_news, label.float())
                 loss22 = loss_fn(image_fake_news, label.float())
                 loss32 = loss_fn(fusion_fake_news, label.float())
@@ -706,9 +706,9 @@ class Trainer():
             else:
                 continue
         self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_clip111.pkl')))
-        print("开始进行最后的测试: ")
+        print("Running final test: ")
         results0 = self.test(self.test_loader)
-        print("最后的结果", results0)
+        print("Final results", results0)
 
         return results0, os.path.join(self.save_param_dir, 'parameter_clip111.pkl')
 
