@@ -206,8 +206,9 @@ class DDIN(nn.Module):
     """
 
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
-                 num_domains=9, hidden_dim=768, num_classes=2):
+                 num_domains=9, hidden_dim=768, num_classes=2, dropout=0.2):
         super(DDIN, self).__init__()
+        self.dropout = dropout
 
         # ===== (a) 双流多粒度特征提取 =====
         # BERT for local text features
@@ -275,10 +276,10 @@ class DDIN(nn.Module):
         self.image_classifier = nn.Linear(hidden_dim, num_classes)
         self.text_classifier = nn.Linear(hidden_dim, num_classes)
 
-    def forward(self, content, content_masks, comments, comments_masks,
-                content_emotion, comments_emotion, emotion_gap, style_features,
-                image, category, **kwargs):
-        batch_size = content.size(0)
+    def forward(self, content, content_masks, image, category, **kwargs):
+        # 从 kwargs 获取 CLIP 专用输入
+        clip_text = kwargs.get('clip_text', content)
+        clip_image = kwargs.get('clip_image', image)
 
         # ===== 特征提取 =====
         # Local text features (BERT)
@@ -290,9 +291,9 @@ class DDIN(nn.Module):
             mae_output = self.mae.forward_encoder(image, mask_ratio=0)
             image_local = mae_output[0]  # [B, P, 768]
 
-        # Global features (CLIP)
-        text_global = self.clip_model.encode_text(content)  # [B, 512]
-        image_global = self.clip_model.encode_image(image)  # [B, 512]
+        # Global features (CLIP) - use dedicated CLIP tokenized inputs
+        text_global = self.clip_model.encode_text(clip_text)  # [B, 512]
+        image_global = self.clip_model.encode_image(clip_image)  # [B, 512]
 
         # ===== 多尺度语义投影 =====
         text_local_proj = self.text_local_proj(text_local.mean(dim=1))  # [B, D]
@@ -317,7 +318,7 @@ class DDIN(nn.Module):
         col_max = attn_weights.max(dim=-2)[0]  # [B, P]
         # 简化处理：取平均
         ll_features = torch.stack([row_max.mean(dim=1), col_max.mean(dim=1)], dim=1)  # [B, 2]
-        conflict_ll = self.ll_inconsistency(ll_features).squeeze(-1)  # [B, D]
+        conflict_ll = self.ll_inconsistency(ll_features.unsqueeze(-1)).squeeze(-1)  # [B, D]
 
         # 3. Global-Local Inconsistency
         gl_concat = torch.stack([text_global_proj, image_local_proj], dim=1)  # [B, 2, D]
@@ -358,30 +359,33 @@ class DDIN(nn.Module):
 class AdaptiveContrastiveLoss(nn.Module):
     """
     自适应对比损失 - 用于增强跨模态一致性学习
+    使用 log_softmax 避免 exp 数值溢出，排除自身配对
     """
 
     def __init__(self, temperature=0.07):
         super(AdaptiveContrastiveLoss, self).__init__()
         self.temperature = temperature
-        self.cosine_sim = nn.CosineSimilarity(dim=-1)
 
     def forward(self, text_features, image_features, labels):
         # 归一化
         text_features = nn.functional.normalize(text_features, dim=-1)
         image_features = nn.functional.normalize(image_features, dim=-1)
 
-        # 计算相似度矩阵
+        # 计算相似度矩阵 [B, B]
         similarity = torch.matmul(text_features, image_features.T) / self.temperature
 
-        # 构建标签矩阵
+        # 构建正例掩码（排除自身）
         labels = labels.view(-1, 1)
-        label_matrix = (labels == labels.T).float()
+        pos_mask = (labels == labels.T).float()
+        pos_mask.fill_diagonal_(0.0)  # 排除自身配对
 
-        # 对比损失
-        loss = -torch.log(
-            torch.exp(similarity * label_matrix).sum(dim=1) /
-            torch.exp(similarity).sum(dim=1)
-        ).mean()
+        # 使用 log_softmax 保证数值稳定
+        log_prob = similarity.log_softmax(dim=1)
+
+        # 平均正例对的 log 概率
+        pos_sum = (log_prob * pos_mask).sum(dim=1)
+        pos_count = pos_mask.sum(dim=1).clamp(min=1)
+        loss = -(pos_sum / pos_count).mean()
 
         return loss
 
@@ -420,8 +424,11 @@ class Trainer():
             clip_model_name=clip_model_name,
             num_domains=num_domains,
             hidden_dim=emb_dim,
-            num_classes=mlp_dims[-1]
+            num_classes=2,  # binary classification: fake vs real
+            dropout=dropout
         )
+
+        self.dropout = dropout
 
         if self.use_cuda:
             self.model = self.model.cuda()
@@ -452,6 +459,9 @@ class Trainer():
         if logger:
             logger.info('Start training...')
 
+        # 确保保存目录存在
+        os.makedirs(self.save_param_dir, exist_ok=True)
+
         # 初始化FGM和EMA
         fgm = FGM(self.model, epsilon=0.5) if self.use_fgm else None
         ema = EMA(self.model, decay=0.999) if self.use_ema else None
@@ -459,6 +469,8 @@ class Trainer():
         recorder = Recorder(self.early_stop)
 
         for epoch in range(self.epoches):
+            # 学习率调度 (先调度再训练，避免warmup延迟一轮)
+            self.scheduler.step()
             self.model.train()
             avg_loss = Averager()
             avg_cls_loss = Averager()
@@ -491,7 +503,6 @@ class Trainer():
                 # 总损失
                 loss = cls_loss + batch_adaptive_weight * adaptive_con_loss
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
 
                 # FGM对抗训练
                 if self.use_fgm and fgm:
@@ -510,9 +521,10 @@ class Trainer():
                     )
                     loss_adv = cls_loss_adv + batch_adaptive_weight * adaptive_con_loss_adv
                     loss_adv.backward()
-                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     fgm.restore()
 
+                # 统一梯度裁剪（包含clean + adversarial梯度）
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                 self.optimizer.step()
                 if self.use_ema and ema:
                     ema.update()
@@ -522,7 +534,6 @@ class Trainer():
                 avg_con_loss.add(adaptive_con_loss.item())
                 avg_adaptive_weight.add(batch_adaptive_weight.mean().item())
 
-            self.scheduler.step()
             current_lr_bert = self.optimizer.param_groups[0]['lr']
             current_lr_other = self.optimizer.param_groups[1]['lr']
             print(
@@ -548,9 +559,8 @@ class Trainer():
             else:
                 continue
 
+        # 加载最佳EMA checkpoint (checkpoint已包含EMA权重，直接使用)
         self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl')))
-        if self.use_ema and ema:
-            ema.apply_shadow()
         results0, results1, results2, results3 = self.test(self.test_loader)
         if logger:
             logger.info("start testing......")
@@ -588,14 +598,6 @@ class Trainer():
             metrics(label, pred1, category, self.category_dict), \
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
-
-mae_model_path=self.config.get('mae_model_path', './model_weights/mae_pretrain_vit_base.pth'),
-clip_model_name=self.config.get('cn_clip_model_name', 'ViT-B-16'),
-use_fgm=self.config.get('use_fgm', True),
-use_ema=self.config.get('use_ema', True),
-contrastive_weight=self.config.get('contrastive_weight', 0.1),
-logger=logger
-)
 
 
 # =========================================================================
