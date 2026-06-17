@@ -1,7 +1,7 @@
 cn_clip
+ftfy
 transformers
 pandas
-ftfy
 regex
 tqdm
 scikit-learn
