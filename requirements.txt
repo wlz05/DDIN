@@ -1,9 +1,9 @@
 cn_clip
 ftfy
 transformers
+tqdm
 pandas
 regex
-tqdm
 scikit-learn
 positional_encodings
 openpyxl
