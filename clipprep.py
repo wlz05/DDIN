@@ -138,9 +138,10 @@ category_dict = {
         "Military": 2,
         "Science": 3,
         "Politics": 4,
-        "Education": 5,
-        "Entertainment": 6,
-        "Society": 7
+        "International": 5,
+        "Education": 6,
+        "Entertainment": 7,
+        "Society": 8
 }
 loader = bert_data(max_len=170, batch_size=64, vocab_file='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
                    category_dict=category_dict, num_workers=1)
