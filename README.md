@@ -251,7 +251,7 @@ Weibo21/
 
 #### FineFake (`FineFake/`)
 
-FineFake is a multimodal fake news dataset with **6 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict.
+FineFake is a multimodal fake news dataset with **7 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict.
 
 ```
 FineFake/
@@ -275,7 +275,7 @@ Encodes images with Chinese CLIP (`ViT-B-16`), saves as `f_train_loader.pkl` / `
 |-----------|---------|------------|
 | **Weibo** | 9 | Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society |
 | **Weibo21** | 9 | Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society |
-| **FineFake** | 6 | Politics, Entertainment, Business, Health, Society, Conflict |
+| **FineFake** | 7 | Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized |
 
 > **Note:** DDIN core model dynamically sets `num_domains = len(category_dict)`. GossipCop model also uses dynamic `num_domains`. Both adapt to any number of categories.
 
