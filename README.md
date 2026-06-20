@@ -52,7 +52,7 @@ Paper Link:
 ```
 DDIN/
 ├── model/
-│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains) (dynamic num_domains)
+│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains)
 │   ├── layers.py              # Base layers (MLP, Attention, FocalLoss, etc.)
 │   ├── pivot.py               # Hypergraph convolution
 │   ├── bert.py                # BERT modules
@@ -221,7 +221,10 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 ### Dataset Format
 
-#### Weibo (`data/`)
+#### Weibo (`data/`) — 9 domains
+
+Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society
+
 ```
 data/
 ├── train_origin.csv
@@ -231,7 +234,10 @@ data/
 └── rumor_images/
 ```
 
-#### Weibo21 (`Weibo21/`)
+#### Weibo21 (`Weibo21/`) — 9 domains
+
+Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society
+
 ```
 Weibo21/
 ├── train_datasets.xlsx
@@ -241,9 +247,9 @@ Weibo21/
 └── rumor_images/
 ```
 
-#### FineFake (`FineFake/`)
+#### FineFake (`FineFake/`) — 7 domains
 
-FineFake is a multimodal fake news dataset with **7 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict.
+Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized
 
 ```
 FineFake/
