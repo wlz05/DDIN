@@ -14,10 +14,10 @@ from cn_clip.clip import load_from_name
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # --- Path config ---
-PKL_PATH = '/root/autodl-tmp/FineFake_dataset/FineFake.pkl'
-IMG_DIR = '/root/autodl-tmp/FineFake_dataset/'
-SAVE_IMAGE = '/root/autodl-tmp/FineFake_dataset/f_train_loader.pkl'
-SAVE_CLIP = '/root/autodl-tmp/FineFake_dataset/f_train_clip.pkl'
+PKL_PATH = './FineFake_dataset/FineFake.pkl'
+IMG_DIR = './FineFake_dataset/'
+SAVE_IMAGE = './FineFake_dataset/f_train_loader.pkl'
+SAVE_CLIP = './FineFake_dataset/f_train_clip.pkl'
 
 # --- Load model ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
