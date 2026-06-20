@@ -99,7 +99,7 @@ DDIN/
 │   └── config.py              # Weibo21 configuration
 ├── main.py                    # Entry point (weibo / weibo21 / finefake) (argparse + config)
 ├── run.py                     # Training dispatch (3 datasets, DDIN + Gossip models) (weibo/weibo21 data loading)
-├── mae.py                     # MAE ViT model (Masked Autoencoder)
+├── mae.py                     # MAE ViT model
 ├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
 ├── feature.py                 # t-SNE feature visualization (graceful fallback)
 ├── preproc.py                 # Weibo MAE image preprocessing -> weibo/
@@ -108,7 +108,7 @@ DDIN/
 ├── w21clip.py                 # Weibo21 CLIP image preprocessing -> weibo21/
 ├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
-├── requirements.txt           # Dependencies
+├── requirements.txt           # Python dependencies
 └── .gitignore
 ```
 
@@ -211,7 +211,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--model_name` | `DDIN` | Model: `DDIN` (core) or `Gossip` (FineFake PLE-FEND) |
+| `--model_name` | `DDIN` | Model: `DDIN` (core) or `Gossip` |
 | `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake`, `finefake`, or `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
