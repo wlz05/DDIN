@@ -3,7 +3,9 @@
 import os
 from utils.clipld import bert_data as weibo_data
 from utils.w21ld import bert_data as weibo21_data
+from utils.fld import bert_data as finefake_data
 from model.net import Trainer as DDINTrainer
+from model.gossip import Trainer as GossipTrainer
 
 class Run():
     def __init__(self, config):
@@ -47,6 +49,15 @@ class Run():
                 "Technology": 0, "Military": 1, "Education": 2, "Disaster": 3,
                 "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
+        elif config['dataset'] == "finefake":
+            self.root_path = './FineFake_dataset/'
+            self.train_path = self.root_path + config.get('finefake_train', 'gossip_train.csv')
+            self.val_path = self.root_path + config.get('finefake_val', 'gossip_test.csv')
+            self.test_path = self.root_path + config.get('finefake_test', 'gossip_test.csv')
+            self.category_dict = {
+                "Politics": 0, "Entertainment": 1, "Business": 2,
+                "Health": 3, "Society": 4, "Conflict": 5
+            }
 
     def get_dataloader(self, dataset):
         loader = None
@@ -57,19 +68,26 @@ class Run():
             elif dataset == "weibo21":
                 loader = weibo21_data(max_len=self.max_len, batch_size=self.batchsize, vocab_file=self.vocab_file,
                                       category_dict=self.category_dict, num_workers=self.num_workers)
+            elif dataset == "finefake":
+                loader = finefake_data(max_len=self.max_len, batch_size=self.batchsize, vocab_file=self.vocab_file,
+                                       category_dict=self.category_dict, num_workers=self.num_workers)
 
         if dataset == "weibo":
-            train_loader = loader.load_data(self.train_path, 'data/train_loader.pkl', 'data/train_clip_loader.pkl',
-                                            True)
+            train_loader = loader.load_data(self.train_path, 'data/train_loader.pkl', 'data/train_clip_loader.pkl', True)
             val_loader = loader.load_data(self.val_path, 'data/val_loader.pkl', 'data/val_clip_loader.pkl', False)
             test_loader = loader.load_data(self.test_path, 'data/test_loader.pkl', 'data/test_clip_loader.pkl', False)
         elif dataset == "weibo21":
-            train_loader = loader.load_data(self.train_path, 'w21/train_loader.pkl',
-                                            'w21/train_clip_loader.pkl', True)
-            val_loader = loader.load_data(self.val_path, 'w21/val_loader.pkl', 'w21/val_clip_loader.pkl',
-                                          False)
-            test_loader = loader.load_data(self.test_path, 'w21/test_loader.pkl', 'w21/test_clip_loader.pkl',
-                                           False)
+            train_loader = loader.load_data(self.train_path, 'w21/train_loader.pkl', 'w21/train_clip_loader.pkl', True)
+            val_loader = loader.load_data(self.val_path, 'w21/val_loader.pkl', 'w21/val_clip_loader.pkl', False)
+            test_loader = loader.load_data(self.test_path, 'w21/test_loader.pkl', 'w21/test_clip_loader.pkl', False)
+        elif dataset == "finefake":
+            ff_dir = self.root_path
+            train_loader = loader.load_data(self.train_path, ff_dir + 'f_train_loader.pkl',
+                                            ff_dir + 'f_train_clip.pkl', True)
+            val_loader = loader.load_data(self.val_path, ff_dir + 'f_val_loader.pkl',
+                                          ff_dir + 'f_val_clip.pkl', False)
+            test_loader = loader.load_data(self.test_path, ff_dir + 'f_test_loader.pkl',
+                                           ff_dir + 'f_test_clip.pkl', False)
 
         return train_loader, val_loader, test_loader
 
@@ -82,10 +100,20 @@ class Run():
     def main(self):
         train_loader, val_loader, test_loader = self.get_dataloader(self.dataset)
 
-        if self.model_name == 'DDIN':  # DDIN core model
+        if self.model_name == 'DDIN':
             trainer = DDINTrainer(emb_dim=self.emb_dim, mlp_dims=self.mlp_dims, bert=self.bert,
                                     use_cuda=self.use_cuda, lr=self.lr, train_loader=train_loader, dropout=self.dropout,
                                     weight_decay=self.weight_decay, val_loader=val_loader, test_loader=test_loader,
                                     category_dict=self.category_dict, early_stop=self.early_stop, epoches=self.epoch,
                                     save_param_dir=os.path.join(self.save_param_dir, self.model_name))
+            trainer.train()
+        elif self.model_name == 'Gossip':
+            trainer = GossipTrainer(emb_dim=self.emb_dim, mlp_dims=self.mlp_dims,
+                                    bert_path_or_name=self.bert,
+                                    clip_path_or_name='ViT-B-16',
+                                    use_cuda=self.use_cuda, lr=self.lr, dropout=self.dropout,
+                                    train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                                    category_dict=self.category_dict, weight_decay=self.weight_decay,
+                                    save_param_dir=os.path.join(self.save_param_dir, self.model_name),
+                                    early_stop=self.early_stop, epoches=self.epoch)
             trainer.train()

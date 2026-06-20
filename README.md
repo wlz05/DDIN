@@ -52,7 +52,7 @@ Paper Link:
 ```
 DDIN/
 ├── model/
-│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains)
+│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains) (dynamic num_domains)
 │   ├── layers.py              # Base layers (MLP, Attention, FocalLoss, etc.)
 │   ├── pivot.py               # Hypergraph convolution
 │   ├── bert.py                # BERT modules
@@ -93,8 +93,8 @@ DDIN/
 │   ├── data2.py               # Weibo21 data processing v2
 │   ├── probe.py               # Weibo21 experiment script
 │   └── config.py              # Weibo21 configuration
-├── main.py                    # Entry point (argparse + config)
-├── run.py                     # Training dispatch (weibo/weibo21 data loading)
+├── main.py                    # Entry point (weibo / weibo21 / finefake) (argparse + config)
+├── run.py                     # Training dispatch (3 datasets, DDIN + Gossip models) (weibo/weibo21 data loading)
 ├── mae.py                     # MAE ViT model (Masked Autoencoder)
 ├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
 ├── feature.py                 # t-SNE feature visualization (graceful fallback)
@@ -104,7 +104,7 @@ DDIN/
 ├── w21clip.py                 # Weibo21 CLIP image preprocessing (9-class dict)
 ├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
-├── requirements.txt           # Dependencies (fixed format)
+├── requirements.txt           # Dependencies (fixed: torch, timm, etc.)           # Dependencies (fixed format)
 └── .gitignore
 ```
 
@@ -131,7 +131,7 @@ DDIN/
 ### Installation
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt           # Dependencies (fixed: torch, timm, etc.)
 ```
 
 Key dependencies:
@@ -180,19 +180,33 @@ mkdir -p ./model_weights/clip_cn/
 
 ## 🚀 Quick Start
 
+### 0. Preprocess Images (required before first run)
+
+```bash
+# Weibo: extract MAE + CLIP image features
+python preproc.py && python clipprep.py
+
+# Weibo21: extract MAE + CLIP image features
+python w21prep.py && python w21clip.py
+
+# FineFake: extract CLIP image features
+python utils/extract.py
+```
+
 ### Training
 
 ```bash
-# Train on Weibo, Weibo21, or FineFake
-python main.py \
-    --model_name DDIN \
-    --dataset xxxxxx \
-    --epoch 50 \
-    --batchsize 64 \
-    --lr 0.0001 \
-    --gpu 0 \
-    --emb_type bert \
-    --early_stop 5
+# Weibo (9 domains) - DDIN core model
+python main.py --dataset weibo --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
+
+# Weibo21 (9 domains) - DDIN core model
+python main.py --dataset weibo21 --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
+
+# FineFake (6 domains) - DDIN core model
+python main.py --dataset finefake --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
+
+# FineFake (6 domains) - GossipCop PLE-FEND model variant
+python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 ```
 
 ### Arguments
@@ -200,7 +214,7 @@ python main.py \
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--model_name` | `DDIN` | Model name (DDIN) |
-| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, or `finefake` |
+| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake`, or `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
 | `--batchsize` | `64` | Batch size |
@@ -231,13 +245,13 @@ python main.py \
 
 #### FineFake Dataset
 
-FineFake is a large-scale multimodal fake news dataset that covers diverse news topics with text-image pairs. The project supports both the `gossip` (GossipCop-style entertainment news) and `politi` (PolitiFact-style political news) subsets.
+FineFake is a multimodal fake news dataset with **6 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict. Supports both DDIN and GossipCop model variants.
 
 ```
 ./FineFake_dataset/
 ├── FineFake.pkl                    # Main data file (text + image paths + labels)
-├── gossip_train.csv                # GossipCop-style training split
-├── gossip_test.csv                 # GossipCop-style test split
+├── gossip_train.csv                # Training split (optional 'category' column for domain labels)
+├── gossip_test.csv                 # Test split
 └── gossip_train/                   # Training images
 ```
 
@@ -245,7 +259,17 @@ FineFake is a large-scale multimodal fake news dataset that covers diverse news 
 ```bash
 python utils/extract.py
 ```
-This script loads images from the FineFake dataset, encodes them with Chinese CLIP (`ViT-B-16`), and saves the features as `f_train_loader.pkl` and `f_train_clip.pkl` for downstream training.
+Encodes images with Chinese CLIP (`ViT-B-16`), saves as `f_train_loader.pkl` / `f_train_clip.pkl`.
+
+### Dataset Category Mapping
+
+| Dataset   | Domains | Categories |
+|-----------|---------|------------|
+| **Weibo** | 9 | Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society |
+| **Weibo21** | 9 | Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society |
+| **FineFake** | 6 | Politics, Entertainment, Business, Health, Society, Conflict |
+
+> **Note:** DDIN core model dynamically sets `num_domains = len(category_dict)`. GossipCop model also uses dynamic `num_domains`. Both adapt to any number of categories.
 
 ---
 

@@ -10,7 +10,7 @@ from run import Run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', default='DDIN')  # model driver (backed by DDIN core)
-parser.add_argument('--dataset', default='weibo21')    # weibo21 or weibo
+parser.add_argument('--dataset', default='weibo21', choices=['weibo', 'weibo21', 'finefake'])  # weibo / weibo21 / finefake
 parser.add_argument('--epoch', type=int, default=50)
 parser.add_argument('--max_len', type=int, default=197)
 parser.add_argument('--num_workers', type=int, default=4)
@@ -74,6 +74,13 @@ config = {
     'save_param_dir': args.save_param_dir,
     'dataset': args.dataset
 }
+# FineFake-specific: override default CSV names if needed
+if args.dataset == 'finefake':
+    config['root_path'] = './FineFake_dataset/'
+    config['finefake_train'] = 'gossip_train.csv'
+    config['finefake_val'] = 'gossip_test.csv'     # use test as val if no dedicated val
+    config['finefake_test'] = 'gossip_test.csv'
+    print('FineFake 6-domain categories: Politics, Entertainment, Business, Health, Society, Conflict')
 
 if __name__ == '__main__':
     Run(config=config).main()
