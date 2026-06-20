@@ -9,7 +9,7 @@ positional_encodings
 openpyxl
 numpy==1.23.2
 git+https://github.com/openai/CLIP.git
---from
-PyTorch  2.1.0
-Python  3.10(ubuntu22.04)
-CUDA  12.1
+timm
+torch==2.1.0
+# Python 3.10 (ubuntu22.04)
+# CUDA 12.1

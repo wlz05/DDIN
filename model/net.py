@@ -314,7 +314,7 @@ class DDIN(nn.Module):
         conflict_gg = self.gg_inconsistency(gg_concat)  # [B, D]
 
         # 2. Local-Local Inconsistency
-        attn_output, attn_weights = self.ll_cross_attn(
+        _, attn_weights = self.ll_cross_attn(
             text_local, image_local, image_local
         )
         row_max = attn_weights.max(dim=-1)[0]  # [B, L]

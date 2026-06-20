@@ -102,14 +102,15 @@ def metricsTrueFalse(y_true, y_pred, category, category_dict):
     fakenews_TP, fakenews_TN, fakenews_FP, fakenews_FN = [0]*9, [0]*9, [0]*9, [0]*9
     realnews_sum, fakenews_sum = [0] * 9, [0] * 9
     for thresh_idx, thresh in enumerate(THRESH):
-        for i in range(len(y_pred)):
-            if y_pred[i]< thresh:y_pred[i]=0
-            else:y_pred[i]=1
-        for idx in range(len(y_pred)):
+        y_pred_thresh = y_pred.copy()
+        for i in range(len(y_pred_thresh)):
+            if y_pred_thresh[i]< thresh: y_pred_thresh[i]=0
+            else: y_pred_thresh[i]=1
+        for idx in range(len(y_pred_thresh)):
             if y_GT[idx] == 1:
                 #  FAKE NEWS RESULT
                 fakenews_sum[thresh_idx] += 1
-                if y_pred[idx] == 0:
+                if y_pred_thresh[idx] == 0:
                     fakenews_FN[thresh_idx] += 1
                     realnews_FP[thresh_idx] += 1
                 else:
@@ -118,7 +119,7 @@ def metricsTrueFalse(y_true, y_pred, category, category_dict):
             else:
                 # REAL NEWS RESULT
                 realnews_sum[thresh_idx] += 1
-                if y_pred[idx] == 1:
+                if y_pred_thresh[idx] == 1:
                     realnews_FN[thresh_idx] += 1
                     fakenews_FP[thresh_idx] += 1
                 else:
