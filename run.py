@@ -31,7 +31,7 @@ class Run():
         self.save_param_dir = config['save_param_dir']
         self.dataset = config['dataset'].lower()
 
-        if config['dataset'] == "weibo":
+        if self.dataset == "weibo":
             self.root_path = './weibo/'
             self.train_path = self.root_path + 'train_origin.csv'
             self.val_path = self.root_path + 'val_origin.csv'
@@ -40,7 +40,7 @@ class Run():
                 "Economy": 0, "Health": 1, "Military": 2, "Science": 3,
                 "Politics": 4, "International": 5, "Education": 6, "Entertainment": 7, "Society": 8
             }
-        elif config['dataset'] == "weibo21":
+        elif self.dataset == "weibo21":
             self.root_path = './weibo21/'
             self.train_path = self.root_path + 'train_datasets.xlsx'
             self.val_path = self.root_path + 'val_datasets.xlsx'
@@ -49,7 +49,7 @@ class Run():
                 "Technology": 0, "Military": 1, "Education": 2, "Disaster": 3,
                 "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
-        elif config['dataset'] == "finefake":
+        elif self.dataset == "finefake":
             self.root_path = './FineFake/'
             self.train_path = self.root_path + config.get('finefake_train', 'gossip_train.csv')
             self.val_path = self.root_path + config.get('finefake_val', 'gossip_test.csv')
