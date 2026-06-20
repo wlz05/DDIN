@@ -6,7 +6,7 @@ import pickle
 import os
 from sklearn.model_selection import train_test_split
 
-root = './FineFake_dataset/'
+root = './FineFake/'
 
 
 def safe_load_pickle(filepath, name="pickle"):

@@ -88,7 +88,7 @@ DDIN/
 │   ├── sched.py               # LR scheduling
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
-├── w21/
+├── Weibo21/
 │   ├── data.py                # Weibo21 data processing
 │   ├── data2.py               # Weibo21 data processing v2
 │   ├── probe.py               # Weibo21 experiment script
@@ -237,7 +237,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 #### Weibo21 Dataset
 ```
-./w21/
+./Weibo21/
 ├── train_datasets.xlsx
 ├── val_datasets.xlsx
 └── test_datasets.xlsx
@@ -248,7 +248,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 FineFake is a multimodal fake news dataset with **6 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict. Supports both DDIN and GossipCop model variants.
 
 ```
-./FineFake_dataset/
+./FineFake/
 ├── FineFake.pkl                    # Main data file (text + image paths + labels)
 ├── gossip_train.csv                # Training split (optional 'category' column for domain labels)
 ├── gossip_test.csv                 # Test split
