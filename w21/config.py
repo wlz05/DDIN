@@ -23,8 +23,8 @@ baned_hashing = set()
 rumor_root = './data/rumor_images/'
 weibo_fake_root = './data/rumor_images/'
 weibo_real_root = './data/nonrumor_images/'
-weibo21_fake_root = './Weibo21/rumor_images/'
-weibo21_real_root = './Weibo21/nonrumor_images/'
+weibo21_fake_root = './weibo21/rumor_images/'
+weibo21_real_root = './weibo21/nonrumor_images/'
 
 
 mixset_xlsx = "./dataset/rumor_dataset/all_images.xlsx"
