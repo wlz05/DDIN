@@ -1,12 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-A from scratch implementation of the VGG architecture.
-
-Video explanation: https://youtu.be/ACmuBbuXn20
-Got any questions leave a comment on youtube :)
-
-Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
-*    2020-04-05 Initial coding
 
 
 import torch

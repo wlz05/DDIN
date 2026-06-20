@@ -1,7 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-Various utilities for neural networks.
-
 import math
 
 import torch as th

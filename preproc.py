@@ -113,7 +113,7 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
-        with open('weibo/val_loader.pkl', 'wb') as file:
+        with open('data/val_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_test(self,path,shuffle,text_only = False):
@@ -140,7 +140,7 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
-        with open('weibo/test_loader.pkl', 'wb') as file:
+        with open('data/test_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_train(self,path,shuffle,text_only = False):
@@ -167,7 +167,7 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
-        with open('weibo/train_loader.pkl', 'wb') as file:
+        with open('data/train_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
 category_dict = {
