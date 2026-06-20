@@ -1,4 +1,7 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
+# NOTE: This dataset loader is for FineFake/GossipCop support.
+# It is not yet integrated into run.py (which currently supports weibo/weibo21).
+# To use: import from run.py with dataset='finefake' after wiring get_dataloader().
 
 import random
 import torch

@@ -19,8 +19,9 @@ try:
     from model.weibo import MultiDomainPLEFENDModel
     logger.info("Imported MultiDomainPLEFENDModel from model.weibo.")
 except ImportError as e:
-    logger.error(f"Failed to import MultiDomainPLEFENDModel: {e}")
-    exit()
+    logger.warning(f"MultiDomainPLEFENDModel not available: {e}.")
+    logger.warning("feature.py requires model/weibo.py. Run main.py first for training.")
+    MultiDomainPLEFENDModel = None
 try:
     from run import Run
     logger.info("Imported Run class from run.py.")
@@ -105,10 +106,14 @@ model.eval()
 logger.info("Extracting features...")
 all_features, all_labels = [], []
 with torch.no_grad():
-    from utils.utils_weibo import clipdata2gpu
+    try:
+        from utils.utils_weibo import clipdata2gpu as c2g
+    except ImportError:
+        from utils.utils import clipdata2gpu as c2g
+        logger.warning("utils_weibo not found, using utils.utils.clipdata2gpu")
 
     for batch in tqdm(test_loader, desc="Extracting features"):
-        batch_data = clipdata2gpu(batch, use_cuda=(DEVICE.type == 'cuda'))
+        batch_data = c2g(batch) if DEVICE.type == 'cuda' else batch
 
         # model.forward() returns an 11-element tuple
         model_outputs = model(**batch_data)
