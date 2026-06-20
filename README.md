@@ -76,7 +76,7 @@ DDIN/
 │   ├── loader.py              # Generic data loader
 │   ├── clipld.py              # Weibo data loader (CSV -> data/)
 │   ├── wloader.py             # Weibo CLIP image loader
-│   ├── w21ld.py               # Weibo21 data loader (Excel -> Weibo21/)
+│   ├── w21ld.py               # Weibo21 data loader (Excel -> weibo21/)
 │   ├── utils.py               # Metrics, Recorder, clipdata2gpu, data2gpu
 │   ├── extract.py             # FineFake CLIP feature extraction -> FineFake/
 │   ├── fsplit.py              # Fast data split
@@ -88,7 +88,7 @@ DDIN/
 │   ├── sched.py               # LR scheduling
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
-├── Weibo21/                 # Weibo21 dataset
+├── weibo21/                 # Weibo21 dataset
 │   ├── data.py                # Weibo21 data processing v1
 │   ├── data2.py               # Weibo21 data processing v2
 │   ├── probe.py               # Weibo21 experiment script
@@ -100,8 +100,8 @@ DDIN/
 ├── feature.py                 # t-SNE feature visualization (graceful fallback)
 ├── preproc.py                 # Weibo MAE image preprocessing -> data/
 ├── clipprep.py                # Weibo CLIP image preprocessing -> data/
-├── w21prep.py                 # Weibo21 MAE image preprocessing -> Weibo21/
-├── w21clip.py                 # Weibo21 CLIP image preprocessing -> Weibo21/
+├── w21prep.py                 # Weibo21 MAE image preprocessing -> weibo21/
+├── w21clip.py                 # Weibo21 CLIP image preprocessing -> weibo21/
 ├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
 ├── requirements.txt           # Dependencies
@@ -172,7 +172,7 @@ mkdir -p ./model_weights/clip_cn/
 
 ## 🚀 Quick Start
 
-> **Dataset folders:** `data/` (Weibo) · `Weibo21/` (Weibo21) · `FineFake/` (FineFake)
+> **Dataset folders:** `data/` (Weibo) · `weibo21/` (Weibo21) · `FineFake/` (FineFake)
 
 ### 0. Preprocess Images (required before first run)
 
@@ -180,7 +180,7 @@ mkdir -p ./model_weights/clip_cn/
 # Weibo -> data/
 python preproc.py && python clipprep.py
 
-# Weibo21 -> Weibo21/
+# Weibo21 -> weibo21/
 python w21prep.py && python w21clip.py
 
 # FineFake -> FineFake/
@@ -234,12 +234,12 @@ data/
 └── rumor_images/
 ```
 
-#### Weibo21 (`Weibo21/`) — 9 domains
+#### Weibo21 (`weibo21/`) — 9 domains
 
 Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society
 
 ```
-Weibo21/
+weibo21/
 ├── train_datasets.xlsx
 ├── val_datasets.xlsx
 ├── test_datasets.xlsx
