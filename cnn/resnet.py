@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-"""
-From scratch implementation of the famous ResNet models.
 The intuition for ResNet is simple and clear, but to code
 it didn't feel super clear at first, even when reading Pytorch own
 implementation. 
@@ -12,7 +10,6 @@ Got any questions leave a comment on youtube :)
 
 Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
 *    2020-04-12 Initial coding
-"""
 
 import torch
 import torch.nn as nn
@@ -77,30 +74,19 @@ class ResNet(nn.Module):
         self.in_channels = 64
         self.use_SRM = use_SRM
         if self.use_SRM:
-            ## bayar conv
             self.BayarConv2D = nn.Conv2d(image_channels, 3, 5, 1, padding=2, bias=False)
             self.bayar_mask = (torch.tensor(np.ones(shape=(5, 5)))).cuda()
             self.bayar_mask[2, 2] = 0
             self.bayar_final = (torch.tensor(np.zeros((5, 5)))).cuda()
             self.bayar_final[2, 2] = -1
 
-            # ## srm conv
-            # self.SRMConv2D = nn.Conv2d(image_channels, 9, 5, 1, padding=2, bias=False)
-            # self.SRMConv2D.weight.data = torch.load('MantraNetv4.pt')['SRMConv2D.weight']
-            #
-            # ##SRM filters (fixed)
-            # for param in self.SRMConv2D.parameters():
-            #     param.requires_grad = False
-            #
             self.relu = nn.ELU()
-            # image_channels = 12
 
         self.conv1 = nn.Conv2d(image_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        # Essentially the entire ResNet architecture are in these 4 lines below
         self.layer1 = self._make_layer(
             block, layers[0], intermediate_channels=64, stride=1
         )
@@ -123,9 +109,7 @@ class ResNet(nn.Module):
             self.BayarConv2D.weight.data *= torch.pow(self.BayarConv2D.weight.data.sum(axis=(2, 3)).view(3, 3, 1, 1),-1)
             self.BayarConv2D.weight.data += self.bayar_final
             conv_bayar = self.BayarConv2D(x)
-            # conv_srm = self.SRMConv2D(x)
 
-            # x = torch.cat((conv_srm, conv_bayar), dim=1)
             x = self.relu(x)
 
         x = self.conv1(x)
@@ -147,9 +131,6 @@ class ResNet(nn.Module):
         identity_downsample = None
         layers = []
 
-        # Either if we half the input space for ex, 56x56 -> 28x28 (stride=2), or channels changes
-        # we need to adapt the Identity (skip connection) so it will be able to be added
-        # to the layer that's ahead
         if stride != 1 or self.in_channels != intermediate_channels * 4:
             identity_downsample = nn.Sequential(
                 nn.Conv2d(
@@ -166,12 +147,8 @@ class ResNet(nn.Module):
             block(self.in_channels, intermediate_channels, identity_downsample, stride)
         )
 
-        # The expansion size is always 4 for ResNet 50,101,152
         self.in_channels = intermediate_channels * 4
 
-        # For example for first resnet layer: 256 will be mapped to 64 as intermediate layer,
-        # then finally back to 256. Hence no identity downsample is needed, since stride = 1,
-        # and also same amount of channels.
         for i in range(num_residual_blocks - 1):
             layers.append(block(self.in_channels, intermediate_channels))
 

@@ -258,10 +258,6 @@ class ReverseLayerF(Function):
         return output, None
 
 
-# =========================================================================
-# DDIN Core Components
-# =========================================================================
-
 class MultiScaleProjectionLayer(nn.Module):
     def __init__(self, in_dim, out_dim, num_scales=3):
         super(MultiScaleProjectionLayer, self).__init__()
@@ -295,11 +291,9 @@ class GlobalGlobalInconsistency(nn.Module):
 
 
 class LocalLocalInconsistency(nn.Module):
-    """Enhanced: uses deep Cross-Attention instead of BMM."""
 
     def __init__(self, text_len, img_len, dim, num_heads=4, num_layers=2):
         super(LocalLocalInconsistency, self).__init__()
-        # Bidirectional cross-attention
         self.text_to_img_attn = nn.ModuleList([
             nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, batch_first=True)
             for _ in range(num_layers)
@@ -309,11 +303,9 @@ class LocalLocalInconsistency(nn.Module):
             for _ in range(num_layers)
         ])
 
-        # LayerNorm for stability
         self.text_norms = nn.ModuleList([nn.LayerNorm(dim) for _ in range(num_layers)])
         self.img_norms = nn.ModuleList([nn.LayerNorm(dim) for _ in range(num_layers)])
 
-        # Conflict aggregation
         self.conflict_aggregator = nn.Sequential(
             nn.Linear(dim * 2, dim),
             nn.GELU(),
@@ -322,9 +314,7 @@ class LocalLocalInconsistency(nn.Module):
         )
 
     def forward(self, f_t_loc, f_i_loc):
-        # f_t_loc: (batch, 197, dim), f_i_loc: (batch, 197, dim)
 
-        # Multi-layer cross-attention interaction
         t_out = f_t_loc
         i_out = f_i_loc
 
@@ -332,31 +322,25 @@ class LocalLocalInconsistency(nn.Module):
                 self.text_to_img_attn, self.img_to_text_attn,
                 self.text_norms, self.img_norms
         ):
-            # Text attends to Image
             t_attn_out, _ = t2i_attn(t_out, i_out, i_out)
             t_out = t_norm(t_out + t_attn_out)
 
-            # Image attends to Text
             i_attn_out, _ = i2t_attn(i_out, t_out, t_out)
             i_out = i_norm(i_out + i_attn_out)
 
-        # Pool to global conflict feature
         t_conflict = t_out.mean(dim=1)  # (batch, dim)
         i_conflict = i_out.mean(dim=1)  # (batch, dim)
 
-        # Fuse bidirectional conflicts
         conflict = torch.cat([t_conflict, i_conflict], dim=-1)
         return self.conflict_aggregator(conflict)
 
 
 class GlobalLocalInconsistency(nn.Module):
-    """High-order nonlinear interaction: uses Hadamard product to capture second-order contradiction features."""
 
     def __init__(self, dim):
         super(GlobalLocalInconsistency, self).__init__()
         self.attn_T = nn.MultiheadAttention(embed_dim=dim, num_heads=4, batch_first=True)
         self.attn_I = nn.MultiheadAttention(embed_dim=dim, num_heads=4, batch_first=True)
-        # Note: input dim changed from dim*2 to dim*3 for Hadamard product
         self.fc = nn.Sequential(
             nn.Linear(dim * 3, dim),
             nn.GELU(),
@@ -364,14 +348,12 @@ class GlobalLocalInconsistency(nn.Module):
         )
 
     def forward(self, f_t_loc, f_i_loc, f_t_glo, f_i_glo):
-        # Global-local cross-attention
         out_T, _ = self.attn_T(f_i_glo.unsqueeze(1), f_t_loc, f_t_loc)
         out_I, _ = self.attn_I(f_t_glo.unsqueeze(1), f_i_loc, f_i_loc)
 
         out_T = out_T.squeeze(1)  # (batch, dim)
         out_I = out_I.squeeze(1)  # (batch, dim)
 
-        # High-order interaction: concat original features + Hadamard product
         hadamard = out_T * out_I  # (batch, dim)
         fused = torch.cat([out_T, out_I, hadamard], dim=-1)  # (batch, dim*3)
 
@@ -404,45 +386,32 @@ class DomainAwareGating(nn.Module):
         return torch.softmax(logits, dim=-1)
 
 
-# =========================================================================
-# Supervised Contrastive Loss
-# =========================================================================
-
 class SupervisedContrastiveLoss(nn.Module):
-    """
     Supervised Contrastive Learning Loss
     Reference: https://arxiv.org/abs/2004.11362
-    """
 
     def __init__(self, temperature=0.07):
         super(SupervisedContrastiveLoss, self).__init__()
         self.temperature = temperature
 
     def forward(self, features_text, features_image, labels):
-        """
         Args:
             features_text: (batch_size, dim) - text global features
             features_image: (batch_size, dim) - image global features
             labels: (batch_size,) - ground truth labels (0/1)
-        """
         batch_size = features_text.shape[0]
 
-        # L2 normalize
         features_text = F.normalize(features_text, dim=1)
         features_image = F.normalize(features_image, dim=1)
 
-        # Concatenate text and image features
         features = torch.cat([features_text, features_image], dim=0)  # (2*batch, dim)
         labels = labels.contiguous().view(-1, 1)
         labels = torch.cat([labels, labels], dim=0)  # (2*batch, 1)
 
-        # Compute similarity matrix
         similarity_matrix = torch.matmul(features, features.T) / self.temperature
 
-        # Create mask: same-class pairs are positive
         mask = torch.eq(labels, labels.T).float().cuda()
 
-        # Remove self
         logits_mask = torch.scatter(
             torch.ones_like(mask),
             1,
@@ -451,30 +420,22 @@ class SupervisedContrastiveLoss(nn.Module):
         )
         mask = mask * logits_mask
 
-        # Compute log_prob
         exp_logits = torch.exp(similarity_matrix) * logits_mask
         log_prob = similarity_matrix - torch.log(exp_logits.sum(1, keepdim=True))
 
-        # Compute mean log-likelihood over positives
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1).clamp(min=1)
 
         loss = -mean_log_prob_pos.mean()
         return loss
 
 
-# =========================================================================
-# Focal Loss for Hard Cases
-# =========================================================================
-
 class FocalLoss(nn.Module):
-    """
     Focal Loss for addressing class imbalance and focusing on hard examples
     Reference: https://arxiv.org/abs/1708.02002
 
     Args:
         alpha: Weighting factor in range (0,1) to balance positive/negative examples
         gamma: Exponent of the modulating factor (1 - p_t)^gamma
-    """
 
     def __init__(self, alpha=0.25, gamma=2.0):
         super(FocalLoss, self).__init__()
@@ -482,24 +443,17 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        """
         Args:
             inputs: (batch_size,) - predicted probabilities (after sigmoid)
             targets: (batch_size,) - ground truth labels (0 or 1)
-        """
-        # BCE loss
         bce_loss = F.binary_cross_entropy(inputs, targets, reduction='none')
 
-        # p_t: probability of the true class
         p_t = inputs * targets + (1 - inputs) * (1 - targets)
 
-        # Focal modulating factor: (1 - p_t)^gamma
         focal_weight = (1 - p_t) ** self.gamma
 
-        # Alpha weighting
         alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
 
-        # Focal loss
         focal_loss = alpha_t * focal_weight * bce_loss
 
         return focal_loss.mean()

@@ -5,16 +5,13 @@ import re
 
 
 def process_reasoning_data(input_file, output_file):
-    """Split text_reasoning column into text/image/cross_modal reasoning fields."""
     df = pd.read_csv(input_file)
 
-    # Ensure required columns exist
     required_columns = ['text_reasoning', 'image_reasoning', 'cross_modal_reasoning']
     for col in required_columns:
         if col not in df.columns:
             df[col] = ""
 
-    # Match entries starting with 1), 2), 3)
     pattern = r'(\d\)\s.*?)(?=\s*\d\)|$)'
 
     for index, row in df.iterrows():

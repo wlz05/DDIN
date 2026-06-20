@@ -5,7 +5,6 @@ import torch.nn as nn
 from math import ceil
 
 base_model = [
-    # expand_ratio, channels, repeats, stride, kernel_size
     [1, 16, 1, 1, 3],
     [6, 24, 2, 2, 3],
     [6, 40, 2, 2, 5],
@@ -16,7 +15,6 @@ base_model = [
 ]
 
 phi_values = {
-    # tuple of: (phi_value, resolution, drop_rate)
     "b0": (0, 224, 0.2),  # alpha, beta, gamma, depth = alpha ** phi
     "b1": (0.5, 240, 0.2),
     "b2": (1, 260, 0.3),
@@ -180,9 +178,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-
-
-
-
-
-

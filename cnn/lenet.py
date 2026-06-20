@@ -1,7 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-"""
-An implementation of LeNet CNN architecture.
 
 Video explanation: https://youtu.be/fcOW-Zyb5Bo
 Got any questions leave a comment on youtube :)
@@ -9,7 +7,6 @@ Got any questions leave a comment on youtube :)
 Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
 *    2020-04-05 Initial coding
 
-"""
 
 import torch
 import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, BatchNorm, Loss functions

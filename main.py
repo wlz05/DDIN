@@ -31,7 +31,6 @@ parser.add_argument('--save_param_dir', default= './param_model')
 args = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
-# --- Set Seeds for Reproducibility ---
 seed = args.seed
 random.seed(seed)
 np.random.seed(seed)
@@ -74,7 +73,6 @@ config = {
     'save_param_dir': args.save_param_dir,
     'dataset': args.dataset
 }
-# FineFake-specific: override default CSV names if needed
 if args.dataset == 'finefake':
     config['root_path'] = './FineFake/'
     config['finefake_train'] = 'gossip_train.csv'

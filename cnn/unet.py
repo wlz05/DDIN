@@ -23,22 +23,16 @@ from .nn import (
 
 
 class TimestepBlock(nn.Module):
-    """
     Any module where forward() takes timestep embeddings as a second argument.
-    """
 
     @abstractmethod
     def forward(self, x, emb):
-        """
         Apply the module to `x` given `emb` timestep embeddings.
-        """
 
 
 class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
-    """
     A sequential module that passes timestep embeddings to the children that
     support it as an extra input.
-    """
 
     def forward(self, x, emb):
         for layer in self:
@@ -50,14 +44,12 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
 
 
 class Upsample(nn.Module):
-    """
     An upsampling layer with an optional convolution.
 
     :param channels: channels in the inputs and outputs.
     :param use_conv: a bool determining if a convolution is applied.
     :param dims: determines if the signal is 1D, 2D, or 3D. If 3D, then
                  upsampling occurs in the inner-two dimensions.
-    """
 
     def __init__(self, channels, use_conv, dims=2):
         super().__init__()
@@ -81,14 +73,12 @@ class Upsample(nn.Module):
 
 
 class Downsample(nn.Module):
-    """
     A downsampling layer with an optional convolution.
 
     :param channels: channels in the inputs and outputs.
     :param use_conv: a bool determining if a convolution is applied.
     :param dims: determines if the signal is 1D, 2D, or 3D. If 3D, then
                  downsampling occurs in the inner-two dimensions.
-    """
 
     def __init__(self, channels, use_conv, dims=2):
         super().__init__()
@@ -107,7 +97,6 @@ class Downsample(nn.Module):
 
 
 class ResBlock(TimestepBlock):
-    """
     A residual block that can optionally change the number of channels.
 
     :param channels: the number of input channels.
@@ -119,7 +108,6 @@ class ResBlock(TimestepBlock):
         channels in the skip connection.
     :param dims: determines if the signal is 1D, 2D, or 3D.
     :param use_checkpoint: if True, use gradient checkpointing on this module.
-    """
 
     def __init__(
         self,
@@ -172,13 +160,11 @@ class ResBlock(TimestepBlock):
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
     def forward(self, x, emb):
-        """
         Apply the block to a Tensor, conditioned on a timestep embedding.
 
         :param x: an [N x C x ...] Tensor of features.
         :param emb: an [N x emb_channels] Tensor of timestep embeddings.
         :return: an [N x C x ...] Tensor of outputs.
-        """
         return checkpoint(
             self._forward, (x, emb), self.parameters(), self.use_checkpoint
         )
@@ -200,12 +186,10 @@ class ResBlock(TimestepBlock):
 
 
 class AttentionBlock(nn.Module):
-    """
     An attention block that allows spatial positions to attend to each other.
 
     Originally ported from here, but adapted to the N-d case.
     https://github.com/hojonathanho/diffusion/blob/1e0dceb3b3495bbe19116a5e1b3596cd0706c543/diffusion_tf/models/unet.py#L66.
-    """
 
     def __init__(self, channels, num_heads=1, use_checkpoint=False):
         super().__init__()
@@ -233,17 +217,13 @@ class AttentionBlock(nn.Module):
 
 
 class QKVAttention(nn.Module):
-    """
     A module which performs QKV attention.
-    """
 
     def forward(self, qkv):
-        """
         Apply QKV attention.
 
         :param qkv: an [N x (C * 3) x T] tensor of Qs, Ks, and Vs.
         :return: an [N x C x T] tensor after attention.
-        """
         ch = qkv.shape[1] // 3
         q, k, v = th.split(qkv, ch, dim=1)
         scale = 1 / math.sqrt(math.sqrt(ch))
@@ -255,7 +235,6 @@ class QKVAttention(nn.Module):
 
     @staticmethod
     def count_flops(model, _x, y):
-        """
         A counter for the `thop` package to count the operations in an
         attention operation.
 
@@ -267,18 +246,13 @@ class QKVAttention(nn.Module):
                 custom_ops={QKVAttention: QKVAttention.count_flops},
             )
 
-        """
         b, c, *spatial = y[0].shape
         num_spatial = int(np.prod(spatial))
-        # We perform two matmuls with the same number of ops.
-        # The first computes the weight matrix, the second computes
-        # the combination of the value vectors.
         matmul_ops = 2 * b * (num_spatial ** 2) * c
         model.total_ops += th.DoubleTensor([matmul_ops])
 
 
 class UNetModel(nn.Module):
-    """
     The full UNet model with attention and timestep embedding.
 
     :param in_channels: channels in the input Tensor.
@@ -298,7 +272,6 @@ class UNetModel(nn.Module):
         class-conditional with `num_classes` classes.
     :param use_checkpoint: use gradient checkpointing to reduce memory usage.
     :param num_heads: the number of attention heads in each attention layer.
-    """
 
     def __init__(
         self,
@@ -439,37 +412,29 @@ class UNetModel(nn.Module):
         )
 
     def convert_to_fp16(self):
-        """
         Convert the torso of the model to float16.
-        """
         self.input_blocks.apply(convert_module_to_f16)
         self.middle_block.apply(convert_module_to_f16)
         self.output_blocks.apply(convert_module_to_f16)
 
     def convert_to_fp32(self):
-        """
         Convert the torso of the model to float32.
-        """
         self.input_blocks.apply(convert_module_to_f32)
         self.middle_block.apply(convert_module_to_f32)
         self.output_blocks.apply(convert_module_to_f32)
 
     @property
     def inner_dtype(self):
-        """
         Get the dtype used by the torso of the model.
-        """
         return next(self.input_blocks.parameters()).dtype
 
     def forward(self, x, timesteps=None, y=None):
-        """
         Apply the model to an input batch.
 
         :param x: an [N x C x ...] Tensor of inputs.
         :param timesteps: a 1-D batch of timesteps.
         :param y: an [N] Tensor of labels, if class-conditional.
         :return: an [N x C x ...] Tensor of outputs.
-        """
         assert (y is not None) == (
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
@@ -494,7 +459,6 @@ class UNetModel(nn.Module):
         return self.out(h)
 
     def get_feature_vectors(self, x, timesteps, y=None):
-        """
         Apply the model and return all of the intermediate tensors.
 
         :param x: an [N x C x ...] Tensor of inputs.
@@ -505,7 +469,6 @@ class UNetModel(nn.Module):
                  - 'middle': the tensor of the output of the lowest-resolution
                              block in the model.
                  - 'up': a list of hidden state tensors from upsampling.
-        """
         hs = []
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
         if self.num_classes is not None:
@@ -527,11 +490,8 @@ class UNetModel(nn.Module):
 
 
 class SuperResModel(UNetModel):
-    """
     A UNetModel that performs super-resolution.
 
-    Expects an extra kwarg `low_res` to condition on a low-resolution image.
-    """
 
     def __init__(self, in_channels, *args, **kwargs):
         super().__init__(in_channels * 2, *args, **kwargs)
@@ -547,4 +507,3 @@ class SuperResModel(UNetModel):
         upsampled = F.interpolate(low_res, (new_height, new_width), mode="bilinear")
         x = th.cat([x, upsampled], dim=1)
         return super().get_feature_vectors(x, timesteps, **kwargs)
-

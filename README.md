@@ -108,15 +108,7 @@ DDIN/
 └── .gitignore
 ```
 
-### Dataset Category Mapping
 
-| Dataset   | Domains | Categories |
-|-----------|---------|------------|
-| **Weibo** | 9 | Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society |
-| **Weibo21** | 9 | Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society |
-| **FineFake** | configurable | No built-in domain categories (binary classification per subset: gossip/politi) |
-
-> **Note:** DDIN core model (`net.py`) dynamically adapts `num_domains` from `len(category_dict)`. GossipCop model (`gossip.py`) now also uses dynamic `num_domains` via `Trainer` injection.
 ## 🔧 Requirements
 
 | Dependency | Version |
@@ -198,16 +190,16 @@ python utils/extract.py
 ### Training
 
 ```bash
-# Weibo (9 domains) - DDIN core model
-python main.py --dataset weibo --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
+# Weibo (9 domains)
+python main.py --dataset weibo --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 
-# Weibo21 (9 domains) - DDIN core model
-python main.py --dataset weibo21 --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
+# Weibo21 (9 domains)
+python main.py --dataset weibo21 --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 
-# FineFake (6 domains) - DDIN core model
+# FineFake (7 domains) - DDIN core model
 python main.py --dataset finefake --model_name DDIN --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 
-# FineFake (6 domains) - GossipCop PLE-FEND model variant
+# FineFake (7 domains) - GossipCop PLE-FEND model variant
 python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 ```
 
@@ -215,8 +207,8 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--model_name` | `DDIN` | Model name (DDIN) |
-| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake`, or `finefake` |
+| `--model_name` | `DDIN` | Model: `DDIN` (core) or `Gossip` (FineFake PLE-FEND) |
+| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake`, `finefake`, or `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
 | `--batchsize` | `64` | Batch size |

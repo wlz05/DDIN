@@ -13,7 +13,6 @@ import numpy as np
 from PIL import Image
 import pickle
 def read_image():
-    """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     for path in file_list:
@@ -52,7 +51,6 @@ def df_filter(df_data):
     return df_data
 
 def word2input(texts, vocab_file, max_len):
-    """BERT tokenization with automatic fallback for missing/invalid text.""""
     if not os.path.exists(vocab_file):
         raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
     tokenizer = BertTokenizer(vocab_file=vocab_file)
@@ -94,7 +92,6 @@ class bert_data():
     def load_data_val(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
 
         ordered_image = []
         post_id = []
@@ -115,7 +112,6 @@ class bert_data():
                     image_id_list.append(image_name)
                     ordered_image.append(image[image_name])
                 post_id.append(id)
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
         with open('data/val_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
@@ -123,7 +119,6 @@ class bert_data():
     def load_data_test(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
 
         ordered_image = []
         post_id = []
@@ -144,7 +139,6 @@ class bert_data():
                     image_id_list.append(image_name)
                     ordered_image.append(image[image_name])
                 post_id.append(id)
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
         with open('data/test_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
@@ -152,7 +146,6 @@ class bert_data():
     def load_data_train(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
 
         ordered_image = []
         post_id = []
@@ -173,7 +166,6 @@ class bert_data():
                     image_id_list.append(image_name)
                     ordered_image.append(image[image_name])
                 post_id.append(id)
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image])
         with open('data/train_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)

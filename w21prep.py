@@ -12,7 +12,6 @@ import cn_clip.clip as clip
 from torchvision import datasets, models, transforms
 from cn_clip.clip import load_from_name, available_models
 def read_image():
-    """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
     file_list = ['Weibo21/nonrumor_images/', 'Weibo21/rumor_images/']
     for path in file_list:
@@ -58,7 +57,6 @@ class bert_data():
     def load_data_train(self,path,shuffle,text_only = False):
         self.data = pd.read_excel(path)
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         image_id_list = []
         image_id = ""
@@ -75,7 +73,6 @@ class bert_data():
                     image_id_list.append(image_name)
                     ordered_image.append(image[image_name])
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
         with open('Weibo21/train_loader.pkl', 'wb') as file:
@@ -84,7 +81,6 @@ class bert_data():
     def load_data_test(self,path,shuffle,text_only = False):
         self.data = pd.read_excel(path)
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         post_id = []
         image_id_list = []
@@ -103,7 +99,6 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
         with open('Weibo21/test_loader.pkl', 'wb') as file:
@@ -112,7 +107,6 @@ class bert_data():
     def load_data_val(self,path,shuffle,text_only = False):
         self.data = pd.read_excel(path)
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         post_id = []
         image_id_list = []
@@ -131,7 +125,6 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
         with open('Weibo21/val_loader.pkl', 'wb') as file:
@@ -155,4 +148,3 @@ val_loader = loader.load_data_val("Weibo21/val_datasets.xlsx", True)#torch.Size(
 
 test_loader = loader.load_data_test("Weibo21/test_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
 train_loader = loader.load_data_train("Weibo21/train_datasets.xlsx", True)#torch.Size([4926, 3, 224, 224])
-
