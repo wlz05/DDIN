@@ -24,8 +24,18 @@ except ImportError:
 try:
     from utils.utils_gossipcop import clipdata2gpu, Averager, calculate_metrics, Recorder
 except ImportError as e:
-    logger.error(f"Failed to import from utils.utils: {e}. Ensure utils/utils.py exists.")
-    raise
+    logger.warning(f"utils_gossipcop not found: {e}, falling back to utils.utils.")
+    from utils.utils import clipdata2gpu, Averager, Recorder
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+    def calculate_metrics(label_list, pred_probs, category_list=None, category_dict=None):
+        import numpy as np
+        preds = np.around(np.array(pred_probs)).astype(int)
+        return {
+            'acc': accuracy_score(label_list, preds),
+            'metric': f1_score(label_list, preds, average='macro'),
+            'precision': precision_score(label_list, preds, average='macro', zero_division=0),
+            'recall': recall_score(label_list, preds, average='macro', zero_division=0),
+        }
 
 # Try importing custom layers and timm Block (layers.py, pivot.py in model/)
 # Note: if these files are missing or broken, provide proper implementations or placeholders
@@ -212,11 +222,12 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                  bert_path_or_name,
                  clip_path_or_name,
                  out_channels, dropout, use_cuda=True,
-                 text_token_len=197, image_token_len=197):
+                 text_token_len=197, image_token_len=197,
+                 num_domains=2):
         super(MultiDomainPLEFENDModel, self).__init__()
         self.use_cuda = use_cuda;
         self.num_expert = 6;
-        self.domain_num = 2;
+        self.domain_num = num_domains;  # dynamic from category_dict
         self.num_share = 1
         self.unified_dim = 768;
         self.text_dim = 768;
@@ -490,12 +501,14 @@ class Trainer():
         self.save_param_dir = save_param_dir
         os.makedirs(self.save_param_dir, exist_ok=True)
 
+        num_domains = len(category_dict) if category_dict else 2
         self.model = MultiDomainPLEFENDModel(
             emb_dim=self.emb_dim, mlp_dims=self.mlp_dims,
             bert_path_or_name=bert_path_or_name,
             clip_path_or_name=clip_path_or_name,
             out_channels=320,  # This parameter may not be directly used in the current model
-            dropout=self.dropout, use_cuda=self.use_cuda
+            dropout=self.dropout, use_cuda=self.use_cuda,
+            num_domains=num_domains
         )
         if self.use_cuda:
             self.model = self.model.cuda()

@@ -138,14 +138,15 @@ class bert_data():
             pickle.dump(ordered_image, file)
         return 1
 category_dict = {
-        "Economy": 0,
-        "Health": 1,
-        "Military": 2,
-        "Science": 3,
+        "Technology": 0,
+        "Military": 1,
+        "Education": 2,
+        "Disaster": 3,
         "Politics": 4,
-        "Education": 5,
-        "Entertainment": 6,
-        "Society": 7
+        "Healthcare": 5,
+        "Finance": 6,
+        "Entertainment": 7,
+        "Society": 8
 }
 loader = bert_data(max_len=170, batch_size=64, vocab_file='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
                    category_dict=category_dict, num_workers=1)
