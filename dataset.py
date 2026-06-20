@@ -64,7 +64,7 @@ class dataset(data.Dataset):
              logger.error(f"Dataset root is not a valid directory: {self.root_path}")
              raise FileNotFoundError(f"Dataset root invalid: {self.root_path}")
 
-        csv_file_name = f"gossip_{'train' if self.is_train else 'test'}.csv"
+        csv_file_name = f"{self.dataset_name}_{'train' if self.is_train else 'test'}.csv"
         csv_path = os.path.join(dataset_folder_path, csv_file_name)
         if not os.path.exists(csv_path):
             logger.error(f"CSV file not found in {dataset_folder_path}: {csv_file_name}")
