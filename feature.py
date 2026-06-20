@@ -56,7 +56,7 @@ if args.dataset == 'weibo':
 elif args.dataset == 'weibo21':
     # weibo21 already uses [384]
     config = {
-        'dataset': 'weibo21', 'model_name': 'domain_weibo', 'weibo21_data_dir': './w21/',
+        'dataset': 'weibo21', 'model_name': 'domain_weibo', 'weibo21_data_dir': './Weibo21/',
         'bert_model_path_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch',
         'bert_vocab_file_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
         'batchsize': args.batchsize, 'max_len': 197, 'num_workers': 4, 'emb_dim': 768,

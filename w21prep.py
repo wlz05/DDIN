@@ -14,7 +14,7 @@ from cn_clip.clip import load_from_name, available_models
 def read_image():
     """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
-    file_list = ['w21/nonrumor_images/', 'w21/rumor_images/']
+    file_list = ['Weibo21/nonrumor_images/', 'Weibo21/rumor_images/']
     for path in file_list:
         if not os.path.exists(path):
             print(f"[WARNING] Image directory not found: {path}, skipping...")
@@ -78,7 +78,7 @@ class bert_data():
         #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
-        with open('w21/train_loader.pkl', 'wb') as file:
+        with open('Weibo21/train_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_test(self,path,shuffle,text_only = False):
@@ -106,7 +106,7 @@ class bert_data():
         #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
-        with open('w21/test_loader.pkl', 'wb') as file:
+        with open('Weibo21/test_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_val(self,path,shuffle,text_only = False):
@@ -134,7 +134,7 @@ class bert_data():
         #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         print(ordered_image.size())
-        with open('w21/val_loader.pkl', 'wb') as file:
+        with open('Weibo21/val_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
 category_dict = {
@@ -151,8 +151,8 @@ category_dict = {
 loader = bert_data(max_len=170, batch_size=64, vocab_file='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
                    category_dict=category_dict, num_workers=1)
 
-val_loader = loader.load_data_val("w21/val_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
+val_loader = loader.load_data_val("Weibo21/val_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
 
-test_loader = loader.load_data_test("w21/test_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
-train_loader = loader.load_data_train("w21/train_datasets.xlsx", True)#torch.Size([4926, 3, 224, 224])
+test_loader = loader.load_data_test("Weibo21/test_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
+train_loader = loader.load_data_train("Weibo21/train_datasets.xlsx", True)#torch.Size([4926, 3, 224, 224])
 
