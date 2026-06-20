@@ -80,7 +80,7 @@ if args.dataset == 'finefake':
     config['finefake_train'] = 'gossip_train.csv'
     config['finefake_val'] = 'gossip_test.csv'     # use test as val if no dedicated val
     config['finefake_test'] = 'gossip_test.csv'
-    print('FineFake 6-domain categories: Politics, Entertainment, Business, Health, Society, Conflict')
+    print('FineFake 7-domain categories: Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized')
 
 if __name__ == '__main__':
     Run(config=config).main()

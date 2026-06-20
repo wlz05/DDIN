@@ -50,13 +50,14 @@ class Run():
                 "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
         elif config['dataset'] == "finefake":
+            # FineFake 7-domain categories (ref: https://arxiv.org/abs/2404.01336)
             self.root_path = './FineFake/'
             self.train_path = self.root_path + config.get('finefake_train', 'gossip_train.csv')
             self.val_path = self.root_path + config.get('finefake_val', 'gossip_test.csv')
             self.test_path = self.root_path + config.get('finefake_test', 'gossip_test.csv')
             self.category_dict = {
                 "Politics": 0, "Entertainment": 1, "Business": 2,
-                "Health": 3, "Society": 4, "Conflict": 5
+                "Health": 3, "Society": 4, "Conflict": 5, "Uncategorized": 6
             }
 
     def get_dataloader(self, dataset):
