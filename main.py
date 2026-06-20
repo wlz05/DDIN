@@ -10,7 +10,7 @@ from run import Run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_name', default='DDIN')  # model driver (backed by DDIN core)
-parser.add_argument('--dataset', default='weibo21', choices=['weibo', 'weibo21', 'finefake'])  # weibo / weibo21 / finefake
+parser.add_argument('--dataset', default='weibo21', choices=['weibo', 'weibo21', 'finefake'])
 parser.add_argument('--epoch', type=int, default=50)
 parser.add_argument('--max_len', type=int, default=197)
 parser.add_argument('--num_workers', type=int, default=4)
