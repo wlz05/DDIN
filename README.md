@@ -104,7 +104,7 @@ DDIN/
 ├── w21clip.py                 # Weibo21 CLIP image preprocessing -> Weibo21/
 ├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
-├── requirements.txt           # Dependencies (fixed: torch, timm, etc.)           # Dependencies (fixed format)
+├── requirements.txt           # Dependencies
 └── .gitignore
 ```
 
@@ -123,7 +123,7 @@ DDIN/
 ### Installation
 
 ```bash
-pip install -r requirements.txt           # Dependencies (fixed: torch, timm, etc.)
+pip install -r requirements.txt
 ```
 
 Key dependencies:
