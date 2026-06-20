@@ -1,14 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-An implementation of GoogLeNet / InceptionNet from scratch.
-
-Video explanation: https://youtu.be/uQc4Fs7yx5I
-Got any questions leave a comment on youtube :)
-
-Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
-*    2020-04-07 Initial coding
-
-
 import torch
 from torch import nn
 

@@ -1,19 +1,12 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-[![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.1.0-red.svg)](https://pytorch.org/)
-[![CUDA](https://img.shields.io/badge/CUDA-12.1-green.svg)](https://developer.nvidia.com/cuda-toolkit)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 **DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation.
 
-Paper Link: 
-
-> Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo-21, and FineFake.
+Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo-21, and FineFake.
 
 ---
 
-## 🧠 Architecture
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────
@@ -47,19 +40,19 @@ Paper Link:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 DDIN/
 ├── model/
-│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains)
+│   ├── net.py                 # DDIN core model + Trainer
 │   ├── layers.py              # Base layers (MLP, Attention, FocalLoss, etc.)
 │   ├── pivot.py               # Hypergraph convolution
 │   ├── bert.py                # BERT modules
 │   ├── domain.py              # Multi-domain PLE-FEND model variant
 │   ├── weibo.py               # Weibo domain model variant
 │   ├── w21.py                 # Weibo21 domain model variant
-│   ├── gossip.py              # GossipCop/FineFake model (dynamic num_domains)
+│   ├── gossip.py              # GossipCop/FineFake model
 │   ├── raw.py                 # Raw DDIN model variant
 │   ├── clip.py                # CLIP domain module
 │   └── test.py                # Test script
@@ -74,11 +67,12 @@ DDIN/
 │   └── fp16.py                # Mixed precision utils
 ├── utils/
 │   ├── loader.py              # Generic data loader
-│   ├── clipld.py              # Weibo data loader (CSV -> weibo/)
+│   ├── clipld.py              # Weibo data loader
 │   ├── wloader.py             # Weibo CLIP image loader
-│   ├── w21ld.py               # Weibo21 data loader (Excel -> weibo21/)
+│   ├── w21ld.py               # Weibo21 data loader
+│   ├── fld.py                 # FineFake data loader
 │   ├── utils.py               # Metrics, Recorder, clipdata2gpu, data2gpu
-│   ├── extract.py             # FineFake CLIP feature extraction -> FineFake/
+│   ├── extract.py             # FineFake CLIP feature extraction
 │   ├── fsplit.py              # Fast data split
 │   ├── fiximg.py              # Image fix utils
 │   ├── datasets.py            # Dataset processing
@@ -88,22 +82,37 @@ DDIN/
 │   ├── sched.py               # LR scheduling
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
-├── weibo/                   # Weibo dataset
+├── data/                      # Weibo dataset (CSV + generated pkl)
 │   ├── train_origin.csv
 │   ├── val_origin.csv
-│   └── test_origin.csv
-├── weibo21/                 # Weibo21 dataset
-│   ├── data.py                # Weibo21 data processing v1
-│   ├── data2.py               # Weibo21 data processing v2
-│   ├── probe.py               # Weibo21 experiment script
-│   └── config.py              # Weibo21 configuration
-├── main.py                    # Entry point (weibo / weibo21 / finefake) (argparse + config)
-├── run.py                     # Training dispatch (3 datasets, DDIN + Gossip models) (weibo/weibo21 data loading)
+│   ├── test_origin.csv
+│   ├── nonrumor_images/
+│   └── rumor_images/
+├── weibo21/                   # Weibo21 dataset (Excel + images + generated pkl)
+│   ├── train_datasets.xlsx
+│   ├── val_datasets.xlsx
+│   ├── test_datasets.xlsx
+│   ├── nonrumor_images/
+│   └── rumor_images/
+├── FineFake/                  # FineFake dataset
+│   ├── FineFake.pkl
+│   ├── gossip_train.csv
+│   ├── gossip_test.csv
+│   ├── gossip_train/
+│   ├── f_train_loader.pkl
+│   └── f_train_clip.pkl
+├── w21/                       # Weibo21 data processing scripts
+│   ├── data.py
+│   ├── data2.py
+│   ├── probe.py
+│   └── config.py
+├── main.py                    # Entry point (argparse + config)
+├── run.py                     # Training dispatch (3 datasets, DDIN + Gossip models)
 ├── mae.py                     # MAE ViT model
-├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
-├── feature.py                 # t-SNE feature visualization (graceful fallback)
-├── preproc.py                 # Weibo MAE image preprocessing -> weibo/
-├── clipprep.py                # Weibo CLIP image preprocessing -> weibo/
+├── dataset.py                 # FineFake/GossipCop dataset
+├── feature.py                 # t-SNE feature visualization
+├── preproc.py                 # Weibo MAE image preprocessing -> data/
+├── clipprep.py                # Weibo CLIP image preprocessing -> data/
 ├── w21prep.py                 # Weibo21 MAE image preprocessing -> weibo21/
 ├── w21clip.py                 # Weibo21 CLIP image preprocessing -> weibo21/
 ├── split.py                   # Reasoning column split utility
@@ -112,8 +121,9 @@ DDIN/
 └── .gitignore
 ```
 
+---
 
-## 🔧 Requirements
+## Requirements
 
 | Dependency | Version |
 |------------|---------|
@@ -142,7 +152,7 @@ Key dependencies:
 
 ---
 
-## 📥 Pretrained Models
+## Pretrained Models
 
 The following pretrained models are required before training:
 
@@ -150,7 +160,6 @@ The following pretrained models are required before training:
 ```bash
 mkdir -p ./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/
 # Download from HuggingFace: hfl/chinese-roberta-wwm-ext-base
-# https://huggingface.co/hfl/chinese-roberta-wwm-ext
 ```
 
 ### 2. MAE Pretrained Weights
@@ -174,14 +183,12 @@ mkdir -p ./model_weights/clip_cn/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-> **Dataset folders:** `weibo/` (Weibo) · `weibo21/` (Weibo21) · `FineFake/` (FineFake)
-
-### 0. Preprocess Images (required before first run)
+### 0. Preprocess Images (required before first run, generates pkl files)
 
 ```bash
-# Weibo -> weibo/
+# Weibo -> data/
 python preproc.py && python clipprep.py
 
 # Weibo21 -> weibo21/
@@ -220,25 +227,33 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--gpu` | `0` | GPU device ID |
 | `--emb_type` | `bert` | Text embedding type: `bert` or `w2v` |
 | `--early_stop` | `5` | Early stopping patience (epochs) |
-| `--seed` | `42/1102/2026/3407` | Random seed for reproducibility |
+| `--seed` | `3074` | Random seed for reproducibility |
 | `--emb_dim` | `768` | Embedding dimension |
 
-### Dataset Format
+---
 
-#### Weibo (`weibo/`) — 9 domains
+## Dataset Format
+
+### Weibo (`data/`) — 9 domains
 
 Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society
 
 ```
-weibo/
+data/
 ├── train_origin.csv
 ├── val_origin.csv
 ├── test_origin.csv
 ├── nonrumor_images/
-└── rumor_images/
+├── rumor_images/
+├── train_loader.pkl
+├── val_loader.pkl
+├── test_loader.pkl
+├── train_clip_loader.pkl
+├── val_clip_loader.pkl
+└── test_clip_loader.pkl
 ```
 
-#### Weibo21 (`weibo21/`) — 9 domains
+### Weibo21 (`weibo21/`) — 9 domains
 
 Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society
 
@@ -248,10 +263,16 @@ weibo21/
 ├── val_datasets.xlsx
 ├── test_datasets.xlsx
 ├── nonrumor_images/
-└── rumor_images/
+├── rumor_images/
+├── train_loader.pkl
+├── val_loader.pkl
+├── test_loader.pkl
+├── train_clip_loader.pkl
+├── val_clip_loader.pkl
+└── test_clip_loader.pkl
 ```
 
-#### FineFake (`FineFake/`) — 7 domains
+### FineFake (`FineFake/`) — 7 domains
 
 Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized
 
@@ -261,15 +282,19 @@ FineFake/
 ├── gossip_train.csv                # Training split (add 'category' column for domain labels)
 ├── gossip_test.csv                 # Test split
 ├── gossip_train/                   # Training images
-├── f_train_loader.pkl              # MAE image features (from extract.py / fiximg.py)
-└── f_train_clip.pkl                # CLIP image features (from extract.py)
+├── f_train_loader.pkl              # MAE image features (from extract.py)
+├── f_val_loader.pkl                # MAE image features (from extract.py)
+├── f_test_loader.pkl               # MAE image features (from extract.py)
+├── f_train_clip.pkl                # CLIP image features (from extract.py)
+├── f_val_clip.pkl                  # CLIP image features (from extract.py)
+└── f_test_clip.pkl                 # CLIP image features (from extract.py)
 ```
 
 **Extract CLIP features from FineFake:**
 ```bash
 python utils/extract.py
 ```
-Encodes images with Chinese CLIP (`ViT-B-16`), saves as `f_train_loader.pkl` / `f_train_clip.pkl`.
+Encodes images with Chinese CLIP (ViT-B-16), saves as `f_train_loader.pkl` / `f_train_clip.pkl`.
 
 ### Dataset Category Mapping
 
@@ -279,24 +304,24 @@ Encodes images with Chinese CLIP (`ViT-B-16`), saves as `f_train_loader.pkl` / `
 | **Weibo21** | 9 | Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society |
 | **FineFake** | 7 | Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized |
 
-> **Note:** DDIN core model dynamically sets `num_domains = len(category_dict)`. GossipCop model also uses dynamic `num_domains`. Both adapt to any number of categories.
+> **Note:** DDIN dynamically sets `num_domains = len(category_dict)`, adapting to any number of categories.
 
 ---
 
-## 🏗️ Training Techniques
+## Training Techniques
 
 | Technique | Description |
 |-----------|-------------|
 | **FGM Adversarial Training** | Applies perturbation to BERT embeddings to improve model robustness |
 | **EMA (Exponential Moving Average)** | Smooths model parameters for better generalization |
 | **Warmup + Cosine Annealing** | Linear warmup for the first 3 epochs, followed by cosine decay |
-| **Layer-wise Learning Rate** | BERT layers use 0.1× base learning rate; other layers use full rate |
+| **Layer-wise Learning Rate** | BERT layers use 0.1x base learning rate; other layers use full rate |
 | **Multi-Task Auxiliary Loss** | Joint training with fusion, image, and text classifiers |
 | **Adaptive Contrastive Loss** | Enhances cross-modal consistency learning |
 | **Early Stopping** | Training halts when validation performance stops improving for N epochs |
 
 ---
 
-## 📄 License
+## License
 
 This project is intended for academic research purposes only. MIT License.
