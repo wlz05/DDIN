@@ -74,7 +74,7 @@ DDIN/
 │   └── fp16.py                # Mixed precision utils
 ├── utils/
 │   ├── loader.py              # Generic data loader
-│   ├── clipld.py              # Weibo data loader (CSV -> data/)
+│   ├── clipld.py              # Weibo data loader (CSV -> weibo/)
 │   ├── wloader.py             # Weibo CLIP image loader
 │   ├── w21ld.py               # Weibo21 data loader (Excel -> weibo21/)
 │   ├── utils.py               # Metrics, Recorder, clipdata2gpu, data2gpu
@@ -88,6 +88,10 @@ DDIN/
 │   ├── sched.py               # LR scheduling
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
+├── weibo/                   # Weibo dataset
+│   ├── train_origin.csv
+│   ├── val_origin.csv
+│   └── test_origin.csv
 ├── weibo21/                 # Weibo21 dataset
 │   ├── data.py                # Weibo21 data processing v1
 │   ├── data2.py               # Weibo21 data processing v2
@@ -98,8 +102,8 @@ DDIN/
 ├── mae.py                     # MAE ViT model (Masked Autoencoder)
 ├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
 ├── feature.py                 # t-SNE feature visualization (graceful fallback)
-├── preproc.py                 # Weibo MAE image preprocessing -> data/
-├── clipprep.py                # Weibo CLIP image preprocessing -> data/
+├── preproc.py                 # Weibo MAE image preprocessing -> weibo/
+├── clipprep.py                # Weibo CLIP image preprocessing -> weibo/
 ├── w21prep.py                 # Weibo21 MAE image preprocessing -> weibo21/
 ├── w21clip.py                 # Weibo21 CLIP image preprocessing -> weibo21/
 ├── split.py                   # Reasoning column split utility
@@ -172,12 +176,12 @@ mkdir -p ./model_weights/clip_cn/
 
 ## 🚀 Quick Start
 
-> **Dataset folders:** `data/` (Weibo) · `weibo21/` (Weibo21) · `FineFake/` (FineFake)
+> **Dataset folders:** `weibo/` (Weibo) · `weibo21/` (Weibo21) · `FineFake/` (FineFake)
 
 ### 0. Preprocess Images (required before first run)
 
 ```bash
-# Weibo -> data/
+# Weibo -> weibo/
 python preproc.py && python clipprep.py
 
 # Weibo21 -> weibo21/
@@ -221,12 +225,12 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 ### Dataset Format
 
-#### Weibo (`data/`) — 9 domains
+#### Weibo (`weibo/`) — 9 domains
 
 Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society
 
 ```
-data/
+weibo/
 ├── train_origin.csv
 ├── val_origin.csv
 ├── test_origin.csv
