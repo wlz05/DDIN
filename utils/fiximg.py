@@ -11,7 +11,7 @@ from tqdm import tqdm
 # Allow loading truncated/corrupted images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-root = '/root/autodl-tmp/FineFake_dataset/'
+root = './FineFake_dataset/'
 
 # Process images as required by DDIN / MAE (3-channel, 224x224)
 data_transforms = transforms.Compose([
