@@ -212,7 +212,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--model_name` | `DDIN` | Model: `DDIN` (core) or `Gossip` |
-| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake`, `finefake`, or `finefake` |
+| `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
 | `--batchsize` | `64` | Batch size |
