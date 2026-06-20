@@ -50,7 +50,6 @@ class Run():
                 "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
         elif config['dataset'] == "finefake":
-            # FineFake 7-domain categories (ref: https://arxiv.org/abs/2404.01336)
             self.root_path = './FineFake/'
             self.train_path = self.root_path + config.get('finefake_train', 'gossip_train.csv')
             self.val_path = self.root_path + config.get('finefake_val', 'gossip_test.csv')

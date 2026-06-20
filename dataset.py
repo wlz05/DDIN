@@ -1,7 +1,4 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
-# NOTE: This dataset loader is for FineFake/GossipCop support.
-# It is not yet integrated into run.py (which currently supports weibo/weibo21).
-# To use: import from run.py with dataset='finefake' after wiring get_dataloader().
 
 import random
 import torch
@@ -18,7 +15,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 logger = logging.getLogger(__name__)
 
 class dataset(data.Dataset):
-    # --- NOTE: __init__ parameter order (required first, optional after) ---
     def __init__(
         self,
         root_path,
@@ -33,7 +29,6 @@ class dataset(data.Dataset):
         clip_max_len=77,
         category_dict=None
     ):
-        # Tokenizer/Processor are injected externally
         self.bert_tokenizer = bert_tokenizer_instance
         self.clip_processor = clip_processor_instance
         if self.bert_tokenizer is None:
@@ -96,7 +91,6 @@ class dataset(data.Dataset):
         label_col = 'label'
         if label_col not in data_df.columns: raise ValueError(f"CSV {csv_path} missing label column.")
 
-        # Compute pos_weight (0=Fake, 1=Real)
         fake_news_num = 0  # label 0
         real_news_num = 0  # label 1
         valid_labels_count = 0
@@ -117,14 +111,12 @@ class dataset(data.Dataset):
         logger.info(f"Valid labels: {valid_labels_count}, Fake (label=0): {fake_news_num}, Real (label=1): {real_news_num}")
         logger.info(f"Computed pos_weight (fake/real): {self.pos_weight:.4f}, thresh (real ratio): {self.thresh:.4f}")
 
-        # Build label_dict
         skipped_num = 0
         image_folder_name = f"{self.dataset_name}_{'train' if self.is_train else 'test'}"
         image_base_dir = os.path.join(dataset_folder_path, image_folder_name)
         if not os.path.isdir(image_base_dir): raise FileNotFoundError(f"Expected image directory not found: {image_base_dir}")
         logger.info(f"Image base directory: {image_base_dir}")
 
-        # Determine category column and mapping
         category_col = None
         if 'category' in data_df.columns:
             category_col = 'category'
@@ -138,7 +130,6 @@ class dataset(data.Dataset):
             potential_image_paths = [ os.path.join(image_base_dir, f"{image_id}{ext}") for ext in ['', '.jpg', '.png', '.jpeg']]
             full_image_path = next((p for p in potential_image_paths if os.path.exists(p) and os.path.isfile(p)), None)
             if full_image_path is None: skipped_num += 1; continue
-            # Read category from CSV if available, otherwise default to 0
             if category_col and category_dict:
                 cat_str = str(row[category_col])
                 category_val = category_dict.get(cat_str, 0)
@@ -152,7 +143,6 @@ class dataset(data.Dataset):
         logger.info(f"Final dataset size (including duplicates): {len(self.label_dict)}")
         if not self.label_dict: raise ValueError("Dataset is empty.")
 
-        # Initialize image transforms (for MAE)
         self.mae_transform = transforms.Compose([
             transforms.Resize((self.image_size, self.image_size)),
             transforms.ToTensor(),

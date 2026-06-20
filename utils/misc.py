@@ -1,14 +1,5 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# DeiT: https://github.com/facebookresearch/deit
-# BEiT: https://github.com/microsoft/unilm/tree/master/beit
-# --------------------------------------------------------
 
 import builtins
 import datetime
@@ -23,9 +14,7 @@ from torch._six import inf
 
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
     window or the global series average.
-    """
 
     def __init__(self, window_size=20, fmt=None):
         if fmt is None:
@@ -41,9 +30,7 @@ class SmoothedValue(object):
         self.total += value * n
 
     def synchronize_between_processes(self):
-        """
         Warning: does not synchronize the deque!
-        """
         if not is_dist_avail_and_initialized():
             return
         t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
@@ -169,9 +156,7 @@ class MetricLogger(object):
 
 
 def setup_for_distributed(is_master):
-    """
     This function disables printing when not in master process
-    """
     builtin_print = builtins.print
 
     def print(*args, **kwargs):
@@ -223,7 +208,6 @@ def init_distributed_mode(args):
         os.environ['LOCAL_RANK'] = str(args.gpu)
         os.environ['RANK'] = str(args.rank)
         os.environ['WORLD_SIZE'] = str(args.world_size)
-        # ["RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"]
     elif 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
         args.rank = int(os.environ["RANK"])
         args.world_size = int(os.environ['WORLD_SIZE'])

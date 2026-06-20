@@ -37,7 +37,6 @@ for i in range(2):
         for full_image_name in piclists:
             if full_image_name[:8]=='https://': full_image_name = "https://i0.wp.com/"+full_image_name[8:]
             if full_image_name[:7]=='http://': full_image_name = "https://i0.wp.com/"+full_image_name[7:]
-            #if full_image_name[:4] == '//s2': full_image_name = "https://i0.wp.com/ww2" + full_image_name[4:]
             if full_image_name[:2]=='//': full_image_name = "https://i0.wp.com/"+full_image_name[2:]
             short_name = full_image_name[full_image_name.rfind('/') + 1:]
             if short_name[-4:]!='gif':

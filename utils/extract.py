@@ -10,22 +10,18 @@ from tqdm import tqdm
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name
 
-# Allow loading truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-# --- Path config ---
 PKL_PATH = './FineFake/FineFake.pkl'
 IMG_DIR = './FineFake/'
 SAVE_IMAGE = './FineFake/f_train_loader.pkl'
 SAVE_CLIP = './FineFake/f_train_clip.pkl'
 
-# --- Load model ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Loading CLIP model to {device}...")
 model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
 model.eval()
 
-# --- Read data ---
 if not os.path.exists(PKL_PATH):
     raise FileNotFoundError(f"[ERROR] FineFake pickle not found: {PKL_PATH}")
 
@@ -40,17 +36,14 @@ missing_count = 0
 
 print(f"Extracting features for {len(df)} images...")
 
-# --- Process loop ---
 for i, row in tqdm(df.iterrows(), total=len(df)):
     img_path = os.path.join(IMG_DIR, row['image_path'])
 
-    # Check if image path is valid
     if 'image_path' not in row or pd.isna(row['image_path']):
         missing_count += 1
         features.append(np.zeros(512))
         continue
 
-    # Check if file exists
     if not os.path.exists(img_path) or not os.path.isfile(img_path):
         missing_count += 1
         if missing_count <= 5:
@@ -70,7 +63,6 @@ for i, row in tqdm(df.iterrows(), total=len(df)):
             print(f"[WARNING] Failed to process image: {img_path}, error: {e}")
         features.append(np.zeros(512))
 
-# --- Save results ---
 if missing_count > 0:
     print(f"[INFO] {missing_count} missing images replaced with zero vectors")
 if corrupted_count > 0:

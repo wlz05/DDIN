@@ -1,6 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# Usage: python feature.py --dataset weibo --batchsize 64
 
 import torch
 import numpy as np
@@ -12,7 +11,6 @@ import os
 import argparse
 import logging
 
-# --- 1. Imports ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 logger = logging.getLogger(__name__)
 try:
@@ -29,7 +27,6 @@ except ImportError as e:
     logger.error(f"Failed to import Run class: {e}")
     exit()
 
-# --- 2. Args ---
 parser = argparse.ArgumentParser(description="Generate t-SNE visualization for a dataset.")
 parser.add_argument('--dataset', default='weibo', choices=['weibo', 'weibo21'], help="Dataset to visualize.")
 parser.add_argument('--batchsize', type=int, default=64, help="Batch size for data loading.")
@@ -39,7 +36,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {DEVICE}")
 
-# --- 3. Config & DataLoader ---
 logger.info(f"Building config for dataset '{args.dataset}'...")
 if args.dataset == 'weibo':
     config = {
@@ -48,13 +44,11 @@ if args.dataset == 'weibo':
         'bert_vocab_file_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
         'batchsize': args.batchsize, 'max_len': 197, 'num_workers': 4, 'emb_dim': 768,
         'lr': 0.000175, 'early_stop': 100, 'epoch': 50, 'save_param_dir': './param_model',
-        # MLP dims set to [384] to match saved weights
         'model_params': {'mlp': {'dims': [384], 'dropout': 0.2}},
         'vocab_file': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt',
         'bert': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch',
     }
 elif args.dataset == 'weibo21':
-    # weibo21 already uses [384]
     config = {
         'dataset': 'weibo21', 'model_name': 'domain_weibo', 'weibo21_data_dir': './Weibo21/',
         'bert_model_path_weibo': './pretrained_model/chinese_roberta_wwm_base_ext_pytorch',
@@ -68,7 +62,6 @@ elif args.dataset == 'weibo21':
 else:
     raise ValueError("This script only supports 'weibo' and 'weibo21' datasets.")
 
-# --- 4 & 5. Model Loading & Feature Extraction ---
 logger.info("Initializing Run class to get data loader...")
 try:
     runner = Run(config)
@@ -115,10 +108,8 @@ with torch.no_grad():
     for batch in tqdm(test_loader, desc="Extracting features"):
         batch_data = c2g(batch) if DEVICE.type == 'cuda' else batch
 
-        # model.forward() returns an 11-element tuple
         model_outputs = model(**batch_data)
 
-        # Extract F_text (idx 4), F_image (idx 5), F_cross (idx 6)
         f_text = model_outputs[4]
         f_image = model_outputs[5]
         f_cross = model_outputs[6]
@@ -133,7 +124,6 @@ all_features = np.concatenate(all_features, axis=0)
 all_labels = np.concatenate(all_labels, axis=0)
 logger.info(f"Feature extraction complete: {all_features.shape[0]} samples.")
 
-# --- Save features ---
 output_dir = './extracted_features'
 os.makedirs(output_dir, exist_ok=True)
 feature_filename = os.path.join(output_dir, f'features_{args.dataset}.npz')
@@ -141,7 +131,6 @@ logger.info(f"Saving features and labels to: {feature_filename}")
 np.savez_compressed(feature_filename, features=all_features, labels=all_labels)
 logger.info("Features and labels saved!")
 
-# --- 6. t-SNE ---
 logger.info("Running t-SNE dimensionality reduction...")
 tsne = TSNE(
     n_components=2, verbose=1, perplexity=15, early_exaggeration=15,
@@ -150,7 +139,6 @@ tsne = TSNE(
 tsne_results = tsne.fit_transform(all_features)
 logger.info("t-SNE complete!")
 
-# --- 7. Plot ---
 logger.info("Plotting visualization...")
 fig, ax = plt.subplots(figsize=(8, 8))
 custom_palette = ["#E67E22", "#3498DB"]  # orange vs blue

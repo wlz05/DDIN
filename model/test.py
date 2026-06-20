@@ -67,11 +67,6 @@ class model(torch.nn.Module):
                 fusion_feature_seq = fusion_feature_seq.unsqueeze(1)
             else:
                 fusion_feature_seq = torch.cat((fusion_feature_seq, self.mlp_fusion[text_feature_num](fusion_emb).unsqueeze(1)), 1)
-        #batch = image_emb.size()[0]
-        #star_emb1 = nn.Parameter(torch.ones((batch, 320)), requires_grad=True)
-        #star_emb2 = nn.Parameter(torch.ones((batch, 320)), requires_grad=True)
-        #star_emb3 = nn.Parameter(torch.ones((batch, 320)), requires_grad=True)
-        #star_emb4 = nn.Parameter(torch.ones((batch, 320)), requires_grad=True)
 
         for sa_i in range(0, int(self.layers), 3):
             trans_text_item = torch.cat(

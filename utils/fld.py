@@ -1,5 +1,4 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
-# FineFake data loader - follows same pattern as clipld.py / w21ld.py
 
 import pickle
 import cn_clip.clip as clip

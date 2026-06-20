@@ -1,6 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# ./mm/model/domain.py
 import os
 import tqdm
 import torch
@@ -9,7 +8,6 @@ import torch.nn.functional as F
 from transformers import BertModel, CLIPModel
 import logging
 
-# Import required functions from utils.utils
 from utils.utils import (
     data2gpu,
     Averager,
@@ -374,7 +372,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         expert_count = self.num_expert
         shared_count = expert_count * 2
 
-        # Text Experts
         self.text_experts = nn.ModuleList()
         for _ in range(self.domain_num):
             if HAS_CUSTOM_LAYERS:
@@ -386,7 +383,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                      range(expert_count)])
             self.text_experts.append(experts)
 
-        # Image Experts
         self.image_experts = nn.ModuleList()
         for _ in range(self.domain_num):
             if HAS_CUSTOM_LAYERS:
@@ -398,7 +394,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                      range(expert_count)])
             self.image_experts.append(experts)
 
-        # Shared Experts - Text
         self.text_share_expert = nn.ModuleList()
         for _ in range(self.num_share):
             if HAS_CUSTOM_LAYERS:
@@ -410,7 +405,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                      range(shared_count)])
             self.text_share_expert.append(shared)
 
-        # Shared Experts - Image
         self.image_share_expert = nn.ModuleList()
         for _ in range(self.num_share):
             if HAS_CUSTOM_LAYERS:

@@ -11,7 +11,6 @@ from PIL import Image
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 def read_image():
-    """Load and preprocess images with CLIP, use zero vectors for corrupted ones.""""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -54,7 +53,6 @@ class bert_data():
     def load_data_train(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         post_id = []
         image_id_list = []
@@ -73,7 +71,6 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         with open('data/train_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
@@ -81,7 +78,6 @@ class bert_data():
     def load_data_test(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         post_id = []
         image_id_list = []
@@ -100,7 +96,6 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         with open('data/test_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
@@ -108,7 +103,6 @@ class bert_data():
     def load_data_val(self,path,shuffle,text_only = False):
         self.data = pd.read_csv(path,encoding='utf-8')
         post = self.data
-        #self.data = df_filter(read_pkl(path))
         ordered_image = []
         post_id = []
         image_id_list = []
@@ -127,7 +121,6 @@ class bert_data():
                     ordered_image.append(image[image_name])
                 post_id.append(id)
 
-        #ordered_image = torch.tensor(list(ordered_image))
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
         with open('data/val_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
@@ -149,4 +142,3 @@ loader = bert_data(max_len=170, batch_size=64, vocab_file='./pretrained_model/ch
 val_loader = loader.load_data_val("data/val_origin.csv", True)
 test_loader = loader.load_data_test("data/test_origin.csv", True)
 train_loader = loader.load_data_train("data/train_origin.csv", True)
-

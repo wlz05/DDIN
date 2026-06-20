@@ -6,13 +6,10 @@ from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_sc
 import numpy as np
 def clipdata2gpu(batch):
     if isinstance(batch, dict):
-        # Dict batch (e.g. from FineFake dataset.py)
         batch_data = {k: v.cuda() if hasattr(v, 'cuda') else v for k, v in batch.items()}
-        # Ensure 'clip_attention_mask' key if missing (backward compat)
         if 'clip_attention_mask' not in batch_data and 'clip_text' in batch_data:
             batch_data['clip_attention_mask'] = (batch_data['clip_text'] != 0).long()
         return batch_data
-    # Tuple/list batch (weibo/weibo21 format)
     batch_data = {
         'content': batch[0].cuda(),
         'content_masks': batch[1].cuda(),
@@ -49,7 +46,6 @@ class Averager():
     def item(self):
         return self.v
 
-"""
 def metrics(y_true, y_pred, category, category_dict):
     res_by_category = {}
     metrics_by_category = {}
@@ -101,7 +97,6 @@ def metrics(y_true, y_pred, category, category_dict):
                 'acc': 0
             }
     return metrics_by_category
-"""
 
 def metricsTrueFalse(y_true, y_pred, category, category_dict):
     y_GT = y_true
@@ -119,7 +114,6 @@ def metricsTrueFalse(y_true, y_pred, category, category_dict):
             else: y_pred_thresh[i]=1
         for idx in range(len(y_pred_thresh)):
             if y_GT[idx] == 1:
-                #  FAKE NEWS RESULT
                 fakenews_sum[thresh_idx] += 1
                 if y_pred_thresh[idx] == 0:
                     fakenews_FN[thresh_idx] += 1
@@ -128,7 +122,6 @@ def metricsTrueFalse(y_true, y_pred, category, category_dict):
                     fakenews_TP[thresh_idx] += 1
                     realnews_TN[thresh_idx] += 1
             else:
-                # REAL NEWS RESULT
                 realnews_sum[thresh_idx] += 1
                 if y_pred_thresh[idx] == 1:
                     realnews_FN[thresh_idx] += 1
@@ -191,7 +184,6 @@ def metrics(y_true, y_pred, category, category_dict):
     metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
 
     for c, res in res_by_category.items():
-        # precision, recall, fscore, support = precision_recall_fscore_support(res['y_true'], np.around(np.array(res['y_pred'])).astype(int), zero_division=0)
         metrics_by_category[c] = {
             'precision': precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
                                          average='macro').round(4).tolist(),
@@ -200,7 +192,6 @@ def metrics(y_true, y_pred, category, category_dict):
             'fscore': f1_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int), average='macro').round(
                 4).tolist(),
 
-            #'auc': metrics_by_category[c]['auc'],
             'acc': accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)).round(4)
         }
     return metrics_by_category

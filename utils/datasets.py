@@ -1,13 +1,5 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# DeiT: https://github.com/facebookresearch/deit
-# --------------------------------------------------------
 
 import os
 import PIL
@@ -32,9 +24,7 @@ def build_dataset(is_train, args):
 def build_transform(is_train, args):
     mean = IMAGENET_DEFAULT_MEAN
     std = IMAGENET_DEFAULT_STD
-    # train transform
     if is_train:
-        # this should always dispatch to transforms_imagenet_train
         transform = create_transform(
             input_size=args.input_size,
             is_training=True,
@@ -49,7 +39,6 @@ def build_transform(is_train, args):
         )
         return transform
 
-    # eval transform
     t = []
     if args.input_size <= 224:
         crop_pct = 224 / 256

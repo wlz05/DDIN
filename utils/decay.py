@@ -1,23 +1,12 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# ELECTRA https://github.com/google-research/electra
-# BEiT: https://github.com/microsoft/unilm/tree/master/beit
-# --------------------------------------------------------
 
 import json
 
 
 def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_decay=.75):
-    """
     Parameter groups for layer-wise lr decay
     Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L58
-    """
     param_group_names = {}
     param_groups = {}
 
@@ -29,7 +18,6 @@ def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_de
         if not p.requires_grad:
             continue
 
-        # no decay: all 1D parameters and model specific ones
         if p.ndim == 1 or n in no_weight_decay_list:
             g_decay = "no_decay"
             this_decay = 0.
@@ -57,16 +45,13 @@ def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_de
         param_group_names[group_name]["params"].append(n)
         param_groups[group_name]["params"].append(p)
 
-    # print("parameter groups: \n%s" % json.dumps(param_group_names, indent=2))
 
     return list(param_groups.values())
 
 
 def get_layer_id_for_vit(name, num_layers):
-    """
     Assign a parameter with its layer id
     Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33
-    """
     if name in ['cls_token', 'pos_embed']:
         return 0
     elif name.startswith('patch_embed'):
