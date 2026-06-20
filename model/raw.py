@@ -6,7 +6,6 @@ import torch
 from positional_encodings.torch_encodings import PositionalEncoding1D, PositionalEncoding2D, PositionalEncodingPermute3D
 from transformers import BertModel
 import torch.nn as nn
-# from positional_encodings.torch_encodings import PositionalEncoding1D
 import mae
 from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu
 from utils.utils import metricsTrueFalse
@@ -32,28 +31,23 @@ class AdaIN(nn.Module):
         super().__init__()
 
     def mu(self, x):
-        """ Takes a (n,c,h,w) tensor as input and returns the average across
         it's spatial dimensions as (h,w) tensor [See eq. 5 of paper]"""
         return torch.sum(x, (1)) / (x.shape[1])
 
     def sigma(self, x):
-        """ Takes a (n,c,h,w) tensor as input and returns the standard deviation
         across it's spatial dimensions as (h,w) tensor [See eq. 6 of paper] Note
         the permutations are required for broadcasting"""
         return torch.sqrt(
             (torch.sum((x.permute([1, 0]) - self.mu(x)).permute([1, 0]) ** 2, (1)) + 0.000000023) / (x.shape[1]))
 
     def forward(self, x, mu, sigma):
-        """ Takes a content embeding x and a style embeding y and changes
         transforms the mean and standard deviation of the content embedding to
         that of the style. [See eq. 8 of paper] Note the permutations are
         required for broadcasting"""
-        # print(mu.shape) # 12
         x_mean = self.mu(x)
         x_std = self.sigma(x)
         x_reduce_mean = x.permute([1, 0]) - x_mean
         x_norm = x_reduce_mean / x_std
-        # print(x_mean.shape) # 768, 12
         return (sigma.squeeze(1) * (x_norm + mu.squeeze(1))).permute([1, 0])
 
 
@@ -68,7 +62,6 @@ class TripleModalFusionNetwork(nn.Module):
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-        # Three-modal feature interaction
         self.modal_interactions = nn.Sequential(
             nn.Linear(input_dim * 3, input_dim),
             nn.GELU(),
@@ -76,7 +69,6 @@ class TripleModalFusionNetwork(nn.Module):
             nn.GELU(),
         )
 
-        # Adaptive modality weight network
         self.weight_network = nn.Sequential(
             nn.Linear(input_dim * 3, input_dim),
             nn.GELU(),
@@ -84,26 +76,20 @@ class TripleModalFusionNetwork(nn.Module):
             nn.Softmax(dim=1)
         )
 
-        # Final fusion layer
         self.fusion_layer = nn.Linear(input_dim * 3, output_dim)
 
     def forward(self, image, text, fused):
-        # Input modality: [batch_size, 320]
         modal_stack = torch.cat([image, text, fused], dim=1)  # [batch_size, 960]
 
-        # Compute modality interaction features
         interaction = self.modal_interactions(modal_stack)  # [batch_size, 320]
 
-        # Compute adaptive modality weights
         weights = self.weight_network(modal_stack)  # [batch_size, 3]
         weights = weights.unsqueeze(2)  # [batch_size, 3, 1]
 
-        # Weighted modality fusion
         image_weighted = image * weights[:, 0]
         text_weighted = text * weights[:, 1]
         fused_weighted = fused * weights[:, 2]
 
-        # Fuse weighted modalities
         fused_feature = torch.cat([image_weighted, text_weighted, fused_weighted], dim=1)
         fused_feature = self.fusion_layer(fused_feature)  # [batch_size, 320]
 
@@ -115,7 +101,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         super(MultiDomainPLEFENDModel, self).__init__()
         self.num_expert = 6
         self.task_num = 2
-        # self.domain_num = 9
         self.domain_num = self.task_num
         self.gate_num = 3
         self.num_share = 1
@@ -141,7 +126,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             image_expert = []
             for j in range(self.num_expert):
                 image_expert.append(cnn_extractor(self.image_dim, feature_kernel))
-                # image_expert.append(image_cnn_extractor())
             image_expert = nn.ModuleList(image_expert)
             image_expert_list.append(image_expert)
         self.image_experts = nn.ModuleList(image_expert_list)
@@ -152,8 +136,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             for j in range(self.num_expert):
                 expert = nn.Sequential(nn.Linear(320, 320),
                                        nn.SiLU(),
-                                       # SimpleGate(),
-                                       # nn.BatchNorm1d(160),
                                        nn.Linear(320, 320),
                                        )
                 fusion_expert.append(expert)
@@ -179,11 +161,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             for j in range(self.num_expert * 2):
                 text_share.append(cnn_extractor(emb_dim, feature_kernel))
                 image_share.append(cnn_extractor(self.image_dim, feature_kernel))
-                # image_share.append(image_cnn_extractor())
                 expert = nn.Sequential(nn.Linear(320, 320),
                                        nn.SiLU(),
-                                       # SimpleGate(),
-                                       # nn.BatchNorm1d(160),
                                        nn.Linear(320, 320),
                                        )
                 fusion_share.append(expert)
@@ -205,40 +184,30 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         for i in range(self.domain_num):
             image_gate = nn.Sequential(nn.Linear(self.unified_dim, self.unified_dim),
                                        nn.SiLU(),
-                                       # SimpleGate(),
-                                       # nn.BatchNorm1d(int(self.unified_dim / 2)),
                                        nn.Linear(self.unified_dim, self.num_expert * 3),
                                        nn.Dropout(0.1),
                                        nn.Softmax(dim=1)
                                        )
             text_gate = nn.Sequential(nn.Linear(self.unified_dim, self.unified_dim),
                                       nn.SiLU(),
-                                      # SimpleGate(),
-                                      # nn.BatchNorm1d(int(self.unified_dim / 2)),
                                       nn.Linear(self.unified_dim, self.num_expert * 3),
                                       nn.Dropout(0.1),
                                       nn.Softmax(dim=1)
                                       )
             fusion_gate = nn.Sequential(nn.Linear(self.unified_dim, self.unified_dim),
                                         nn.SiLU(),
-                                        # SimpleGate(),
-                                        # nn.BatchNorm1d(int(self.unified_dim / 2)),
                                         nn.Linear(self.unified_dim, self.num_expert * 4),
                                         nn.Dropout(0.1),
                                         nn.Softmax(dim=1)
                                         )
             fusion_gate0 = nn.Sequential(nn.Linear(320, 160),
                                          nn.SiLU(),
-                                         # SimpleGate(),
-                                         # nn.BatchNorm1d(80),
                                          nn.Linear(160, self.num_expert * 3),
                                          nn.Dropout(0.1),
                                          nn.Softmax(dim=1)
                                          )
             final_gate = nn.Sequential(nn.Linear(320, 320),
                                        nn.SiLU(),
-                                       # SimpleGate(),
-                                       # nn.BatchNorm1d(int(self.unified_dim / 2)),
                                        nn.Linear(320, 160),
                                        nn.SiLU(),
                                        nn.Linear(160, self.num_expert * 3),
@@ -256,7 +225,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.fusion_gate_list0 = nn.ModuleList(fusion_gate_list0)
         self.final_gate_list = nn.ModuleList(final_gate_list)
 
-        # self.text_attention = TokenAttention(self.unified_dim)
         self.text_attention = MaskAttention(self.unified_dim)
         self.image_attention = TokenAttention(self.unified_dim)
         self.fusion_attention = TokenAttention(self.unified_dim * 2)
@@ -269,7 +237,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.fusion_classifier = MLP(320, mlp_dims, dropout)
         self.fusion_classifier_Mu = MLP_Mu(320, mlp_dims, dropout)
 
-        # self.max_classifier = MLP(640, mlp_dims, dropout)
         self.max_classifier = MLP(320 * 1, mlp_dims, dropout)
 
         share_classifier_list = []
@@ -309,53 +276,44 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         for param in self.image_model.parameters():
             param.requires_grad = False
 
-        #### mapping MLPs
         self.mapping_IS_MLP_mu = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_IS_MLP_sigma = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_T_MLP_mu = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_T_MLP_sigma = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_IP_MLP_mu = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_IP_MLP_sigma = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_CC_MLP_mu = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.mapping_CC_MLP_sigma = nn.Sequential(
             nn.Linear(1, self.unified_dim),
             nn.SiLU(),
-            # nn.BatchNorm1d(self.unified_dim),
             nn.Linear(self.unified_dim, 1),
         )
         self.adaIN = AdaIN()
@@ -365,13 +323,11 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         self.ClipModel, _ = load_from_name("ViT-B-16", device="cuda", download_root='./')
 
-        # pivot:
         feature_emb_size = 320
         img_emb_size = 320
         feature_num = 4
         self.feature_num = 4
         text_emb_size = 320
-        # self.n_node = 64
         self.feature_emb_size = 320
         self.emb_size = 320
         self.layers = 12
@@ -466,7 +422,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         self.tau = 0.5
 
-        # Multimodal fusion
         self.fusion_model = TripleModalFusionNetwork(320, 320)
 
     def forward(self, **kwargs):
@@ -514,7 +469,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             fusion_gate_out_list.append(gate_out)
         self.fusion_gate_out_list = fusion_gate_out_list
 
-        # Text modality
         text_gate_expert_value = []
         text_experts_feature = 0
         text_gate_share_expert_value = []
@@ -537,7 +491,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         text_gate_expert_value.append(text_experts_feature0)
         text_gate_expert_value.append(text_experts_feature1)
 
-        # Image modality
         image_gate_expert_value = []
         image_experts_feature = 0
         image_gate_share_expert_value = []
@@ -560,7 +513,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         image_gate_expert_value.append(image_experts_feature0)
         image_gate_expert_value.append(image_experts_feature1)
 
-        # Fusion modality
         text = text_gate_share_expert_value[0]
         image = image_gate_share_expert_value[0]
         fusion_share_feature = torch.cat((clip_fusion_feature, text, image), dim=-1)
@@ -574,7 +526,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             fusion_gate_out_list0.append(gate_out)
         self.fusion_gate_out_list0 = fusion_gate_out_list0
 
-        # Fusion modality
         fusion_gate_expert_value0 = []
         fusion_experts_feature = 0
         fusion_gate_share_expert_value0 = []
@@ -591,7 +542,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                         fusion_tmp_expert0 * self.fusion_gate_out_list0[m][:, (self.num_expert + n)].unsqueeze(1))
                 gate_share_expert += (
                         fusion_tmp_expert0 * self.fusion_gate_out_list0[m][:, (self.num_expert + n)].unsqueeze(1))
-            # fusion_gate_expert_value0.append(share_gate_expert0)
             fusion_gate_share_expert_value0.append(gate_share_expert)
             fusion_experts_feature = fusion_tmp_expert0
 
@@ -601,12 +551,10 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         fusion_gate_expert_value0.append(fusion_experts_feature0)
         fusion_gate_expert_value0.append(fusion_experts_feature1)
 
-        # Features per modality
         text_features = text_gate_expert_value[0]
         image_features = image_gate_expert_value[0]
         fusion_features = fusion_gate_expert_value0[0]
 
-        # Multi-view
         text_fake_news_logits = self.text_classifier(text_features).squeeze(1)
         image_fake_news_logits = self.image_classifier(image_features).squeeze(1)
         fusion_fake_news_logits = self.fusion_classifier(fusion_features).squeeze(1)
@@ -615,11 +563,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         image_fake_news = torch.sigmoid(image_fake_news_logits)
         fusion_fake_news = torch.sigmoid(fusion_fake_news_logits)
 
-        # Multimodal fusion
-        # all_modility = text_features + image_features + fusion_features
         all_modility = self.fusion_model(text_features, image_features, fusion_features)
 
-        # Fake news detection via sigmoid
         fake_news_sigmoid = torch.sigmoid(self.max_classifier(all_modility).squeeze(1))
 
         return fake_news_sigmoid, text_fake_news, image_fake_news, fusion_fake_news
@@ -682,7 +627,6 @@ class Trainer():
                 label0, text_fake_news, image_fake_news, fusion_fake_news = self.model(**batch_data)
                 loss0 = loss_fn(label0, label.float())
 
-                # Auxiliary fake news detection task
                 loss12 = loss_fn(text_fake_news, label.float())
                 loss22 = loss_fn(image_fake_news, label.float())
                 loss32 = loss_fn(fusion_fake_news, label.float())
@@ -695,7 +639,6 @@ class Trainer():
                     scheduler.step()
                 avg_loss.add(loss.item())
             print('Training Epoch {}; Loss {}; '.format(epoch + 1, avg_loss.item()))
-            # results0,results1,results2,results3 = self.test(self.val_loader)
             results0 = self.test(self.test_loader)
             mark = recorder.add(results0)
             if mark == 'save':

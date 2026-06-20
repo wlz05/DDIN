@@ -8,12 +8,10 @@ from PIL import Image, ImageFile
 from torchvision import transforms
 from tqdm import tqdm
 
-# Allow loading truncated/corrupted images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 root = './FineFake/'
 
-# Process images as required by DDIN / MAE (3-channel, 224x224)
 data_transforms = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -37,7 +35,6 @@ def process_split(split):
     for img_path in tqdm(df['image_path']):
         full_path = os.path.join(root, img_path)
 
-        # Check if file exists
         if not os.path.exists(full_path) or not os.path.isfile(full_path):
             missing_count += 1
             if missing_count <= 5:
@@ -53,7 +50,6 @@ def process_split(split):
             corrupted_count += 1
             if corrupted_count <= 5:
                 print(f"[WARNING] Corrupted image: {full_path}, error: {e}")
-            # Replace corrupted images with black placeholder to maintain dimension alignment
             images.append(torch.zeros(3, 224, 224))
 
     if missing_count > 0:
@@ -61,7 +57,6 @@ def process_split(split):
     if corrupted_count > 0:
         print(f"[INFO] {split}: {corrupted_count} corrupted images replaced with black placeholder")
 
-    # Stack into [N, 3, 224, 224]
     final_tensor = torch.stack(images)
     output_path = root + f'f_{split}_loader.pkl'
     try:

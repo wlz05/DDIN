@@ -1,6 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-"""
 A from scratch implementation of the VGG architecture.
 
 Video explanation: https://youtu.be/ACmuBbuXn20
@@ -9,9 +8,7 @@ Got any questions leave a comment on youtube :)
 Programmed by Aladdin Persson <aladdin.persson at hotmail dot com>
 *    2020-04-05 Initial coding
 
-"""
 
-# Imports
 import torch
 import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
 
@@ -116,6 +113,3 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = VGG_net(in_channels=3, num_classes=1000).to(device)
     print(model)
-    ## N = 3 (Mini batch size)
-    # x = torch.randn(3, 3, 224, 224).to(device)
-    # print(model(x).shape)

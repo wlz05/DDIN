@@ -37,10 +37,6 @@ class HyperConv(Module):
         self.img_emb_size = img_emb_size
         self.text_emb_size = text_emb_size
 
-        # self.img_mlp = nn.Linear(self.img_emb_size, self.emb_size)
-        # self.text_mlp = nn.Linear(self.text_emb_size, self.emb_size)
-        # self.pri_mlp = nn.Linear(self.emb_size, self.emb_size)
-        # self.id_mlp = nn.Linear(self.emb_size, self.emb_size)
         self.dif2one_mlp = nn.Linear(3 * self.emb_size, self.emb_size)
 
         self.w_pv = nn.Linear(self.emb_size, self.emb_size)
@@ -84,8 +80,6 @@ class HyperConv(Module):
         self.dropout70 = nn.Dropout(0.7)
 
     def forward(self, adjacency, adjacency_pv, adjacency_vp, embedding, pri_emb, img_emb, text_emb):
-        # updating embeddings with different types
-        # convert image_emb and text_emb to the embeddings dimension as item_emb
         image_embeddings = self.img_mlp(img_emb)
         text_embeddings = self.text_mlp(text_emb)
         price_embeddings = self.pri_mlp(pri_emb)
@@ -119,12 +113,9 @@ class MultiHeadSelfAttention(torch.nn.Module):
     def dot_score(self, encoder_output):
         query = self.dropout(self.query(encoder_output))
         key = self.dropout(self.key(encoder_output))
-        # head_num * batch_size * session_length * head_dim
         querys = torch.stack(query.chunk(self.head_num, -1), 0)
         keys = torch.stack(key.chunk(self.head_num, -1), 0)
-        # head_num * batch_size * session_length * session_length
         dots = querys.matmul(keys.permute(0, 1, 3, 2)) / torch.sqrt(torch.tensor(self.head_dim, dtype=torch.float))
-        #         print(len(dots),dots[0].shape)
         return dots
 
     def forward(self, encoder_outputs, mask=None):
@@ -143,9 +134,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
         else:
             weights = F.softmax(attention_energies, dim=2)
 
-        # head_num * batch_size * session_length * head_dim
         outputs = weights.matmul(values)
-        # batch_size * session_length * hidden_size
         outputs = torch.cat([outputs[i] for i in range(outputs.shape[0])], dim=-1)
         outputs = self.dropout(self.concat_weight(outputs))
 
@@ -189,14 +178,10 @@ class MLP_trans(torch.nn.Module):
         self.activate = torch.nn.SiLU()
         self.mlp_1 = nn.Linear(input_size, out_size)
         self.mlp_2 = nn.Linear(out_size, out_size)
-        # self.mlp_3 = nn.Linear(input_size, input_size)
-        # self.mlp_4 = nn.Linear(input_size, out_size)
 
     def forward(self, emb_trans):
         emb_trans = self.dropout(self.activate(self.mlp_1(emb_trans)))
         emb_trans = self.dropout(self.activate(self.mlp_2(emb_trans)))
-        # emb_trans = self.dropout(self.activate(self.mlp_3(emb_trans)))
-        # emb_trans = self.dropout(self.activate(self.mlp_4(emb_trans)))
         return emb_trans
 
 class MLP_merge_star(torch.nn.Module):
@@ -212,8 +197,6 @@ class MLP_merge_star(torch.nn.Module):
 
 class LayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-12):
-        """Construct a layernorm module in the TF style (epsilon inside the square root).
-        """
         super(LayerNorm, self).__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.bias = nn.Parameter(torch.zeros(hidden_size))
@@ -276,9 +259,6 @@ class Beyond(Module):
         self.price_mean_embedding = nn.Embedding(self.n_price, self.emb_size)
         self.price_cov_embedding = nn.Embedding(self.n_price, self.emb_size)
 
-        # init price embedding with different distribution
-        # torch.nn.init.uniform_(self.price_mean_embedding.weight, a=0.0, b=1.0)
-        # torch.nn.init.uniform_(self.price_cov_embedding.weight, a=0.0, b=1.0)
 
         self.star_emb1 = nn.Embedding(self.n_node, self.feature_emb_size)
         self.star_emb2 = nn.Embedding(self.n_node, self.feature_emb_size)
@@ -292,7 +272,6 @@ class Beyond(Module):
         self.mean_dense = nn.Linear(self.emb_size, self.emb_size)
         self.cov_dense = nn.Linear(self.emb_size, self.emb_size)
 
-        # introducing text&image embeddings
         img_path = './datasets/'+ dataset + '/imgMatrixpca.npy'
         imgWeights = np.load(img_path)
         self.image_embedding = nn.Embedding(self.n_node, img_emb_size)
@@ -305,7 +284,6 @@ class Beyond(Module):
         text_pre_weight = np.array(textWeights)
         self.text_embedding.weight.data.copy_(torch.from_numpy(text_pre_weight))
 
-        # introducing generated emb img&text
         imgText_path = './datasets/' + dataset + '/imgTextMatrixpca.npy'
         imgTextWeights = np.load(imgText_path)
         self.text_img_embedding = nn.Embedding(self.n_node, text_emb_size)
@@ -326,22 +304,7 @@ class Beyond(Module):
         self.text_mlp = nn.Linear(self.text_emb_size, self.emb_size)
         self.pri_mlp = nn.Linear(self.emb_size, self.emb_size)
         self.id_mlp = nn.Linear(self.emb_size, self.emb_size)
-        # self.img_text_cat = nn.Linear(self.emb_size*2, self.emb_size)
 
-        # feature interaction
-
-
-        # feature gate
-        # self.star1_gate_w1 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star1_gate_w2 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star2_gate_w1 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star2_gate_w2 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star3_gate_w1 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star3_gate_w2 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star4_gate_w1 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-        # self.star4_gate_w2 = nn.Linear(self.feature_emb_size, self.feature_emb_size)
-
-        # self.pri_int_merge = nn.Linear(self.emb_size, self.emb_size, bias=False)
 
         self.active = nn.ReLU()
         self.w_1 = nn.Linear(self.emb_size * 2, self.emb_size)
@@ -349,31 +312,14 @@ class Beyond(Module):
         self.glu1 = nn.Linear(self.emb_size, self.emb_size)
         self.glu2 = nn.Linear(self.emb_size, self.emb_size, bias=False)
 
-        # self.intre_mlp1 = nn.Linear(self.emb_size, self.emb_size, bias=True)
-        # self.intre_mlp2 = nn.Linear(self.emb_size, self.emb_size, bias=True)
 
-        # self.w_pm1 = nn.Linear(self.emb_size * 2, self.emb_size)
-        # self.w_pm2 = nn.Linear(self.emb_size, 1)
-        # self.glu_pm1 = nn.Linear(self.emb_size, self.emb_size)
-        # self.glu_pm2 = nn.Linear(self.emb_size, self.emb_size, bias=False)
-        # self.glu_pm3 = nn.Linear(self.emb_size, self.emb_size, bias=False)
-        #
-        # self.w_pc1 = nn.Linear(self.emb_size * 2, self.emb_size)
-        # self.w_pc2 = nn.Linear(self.emb_size, 1)
-        # self.glu_pc1 = nn.Linear(self.emb_size, self.emb_size)
-        # self.glu_pc2 = nn.Linear(self.emb_size, self.emb_size, bias=False)
-        # self.glu_pc3 = nn.Linear(self.emb_size, self.emb_size, bias=False)
-
-        # self_attention
         if self.emb_size % num_heads != 0:
             raise ValueError(
                 "The hidden size (%d) is not a multiple of the number of attention "
                 "heads (%d)" % (emb_size, num_heads))
 
-        # self.num_heads = num_heads  # 4
         self.attention_head_size = int(emb_size / num_heads)  # 16
         self.all_head_size = int(self.num_heads * self.attention_head_size)
-        # query, key, value
         self.mean_query = nn.Linear(self.emb_size, self.emb_size)  # 128, 128
         self.mean_key = nn.Linear(self.emb_size, self.emb_size)
         self.mean_value = nn.Linear(self.emb_size, self.emb_size)
@@ -401,7 +347,6 @@ class Beyond(Module):
 
     def generate_sess_emb(self, item_embedding, price_mean_emb, price_cov_emb, category_emb, session_item, sess_price, sess_category, session_len, reversed_sess_item, mask):
         zeros = torch.cuda.FloatTensor(1, self.emb_size).fill_(0)
-        # zeros = torch.zeros(1, self.emb_size)
         mask = mask.float().unsqueeze(-1)
 
         item_embedding = torch.cat([zeros, item_embedding], 0)
@@ -409,8 +354,6 @@ class Beyond(Module):
         price_cov_embedding = torch.cat([zeros, price_cov_emb], 0)
         category_embedding = torch.cat([zeros, category_emb], 0)
 
-        # get = lambda i: item_embedding[reversed_sess_item[i]]
-        # seq_h = torch.cuda.FloatTensor(self.batch_size, list(reversed_sess_item.shape)[1], self.emb_size).fill_(0)
 
         get = lambda i: item_embedding[session_item[i]]
         seq_h = torch.cuda.FloatTensor(self.batch_size, list(session_item.shape)[1], self.emb_size).fill_(0)
@@ -432,14 +375,10 @@ class Beyond(Module):
         for i in torch.arange(sess_category.shape[0]):
             seq_cate[i] = get_cate(i)
 
-        # stamp to get session emb
         hs = torch.div(torch.sum(seq_h, 1), session_len.type(torch.cuda.FloatTensor))
-        #
         len = seq_h.shape[1]
-        # #  position embedding reverse
         pos_emb = self.pos_embedding.weight[:len]
         pos_emb = pos_emb.unsqueeze(0).repeat(self.batch_size, 1, 1)
-        # price_seq position emb
         pos_pri_emb = self.pos_pri_embedding.weight[:len]
         pos_pri_emb = pos_pri_emb.unsqueeze(0).repeat(self.batch_size, 1, 1)
 
@@ -451,7 +390,6 @@ class Beyond(Module):
         beta = beta * mask
         interest_pre = torch.sum(beta * seq_h, 1)
 
-        # seq_pri_mean & seq_pri_cov & pos_pri_emb
 
         seq_pri_mean_emb = self.LayerNorm(seq_pri_mean)  + self.LayerNorm(seq_cate)
         seq_pri_mean_emb = self.dropout2(seq_pri_mean_emb)
@@ -480,9 +418,6 @@ class Beyond(Module):
         cov_key_layer = self.transpose_for_scores(mixed_cov_key_layer, attention_head_size)
         cov_value_layer = self.transpose_for_scores(mixed_cov_value_layer, attention_head_size)
 
-        # Take the dot product between "query" and "key" to get the raw attention scores.
-        # attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
-        # [bs, 8, seqlen, 16]*[bs, 8, 16, seqlen]  ==> [bs, 8, seqlen, seqlen]
         attention_scores = -wasserstein_distance_matmul(mean_query_layer, cov_query_layer, mean_key_layer,
                                                         cov_key_layer)
 
@@ -500,7 +435,6 @@ class Beyond(Module):
 
         mean_context_layer = mean_context_layer.view(*new_context_layer_shape)
         cov_context_layer = cov_context_layer.view(*new_context_layer_shape)
-        # seq_pri_mean & seq_pri_cov
         mean_hidden_states = self.mean_dense(mean_context_layer)
         mean_hidden_states = self.dropout2(mean_hidden_states)
         mean_hidden_states = self.LayerNorm(mean_hidden_states + seq_pri_mean)
@@ -595,7 +529,6 @@ class Beyond(Module):
         con_loss = text_con_loss + img_con_loss
         return con_loss
     def transpose_for_scores(self, x, attention_head_size):
-        # INPUT: x shape = [bs, seqlen, hid_size], assuming hid_size=128
         new_x_shape = x.size()[:-1] + (self.num_heads, attention_head_size)  # [bs, seqlen, 8, 16]
         x = x.view(*new_x_shape)  #
         return x.permute(0, 2, 1, 3)
@@ -614,12 +547,9 @@ class Beyond(Module):
 
         img_gen_emb = self.img_text_embedding.weight
         text_gen_emb = self.text_img_embedding.weight
-        # self-contrastive -> refining image&text embedding, two loss
         con_loss = self.contrastive(image_emb, text_emb, img_gen_emb, text_gen_emb)
-        # fusion image&text
 
         item_emb_final = self.fusion_img_text(image_emb, text_emb, star_emb1, star_emb2, star_emb3, star_emb4)
-        # obtain session emb
         sess_emb_hgnn, sess_price_mean, sess_price_cov, price_item_mean, price_item_cov = self.generate_sess_emb(item_emb_final, price_mean_emb, price_cov_emb, category_emb, session_item, sess_price, sess_category, session_len, reversed_sess_item, mask) #batch session embeddings
 
         return item_emb_final, price_item_mean, price_item_cov, sess_emb_hgnn, sess_price_mean, sess_price_cov, self.lam*con_loss
@@ -636,7 +566,6 @@ def perform(model, i, data):
     reversed_sess_item = trans_to_cuda(torch.Tensor(reversed_sess_item).long())
     item_emb_final, price_mean_emb, price_cov_emb, sess_emb_hgnn, sess_price_mean, sess_price_cov, con_loss = model(session_item, sess_price, sess_category, session_len, reversed_sess_item, mask)
     scores_interest = torch.mm(sess_emb_hgnn, torch.transpose(item_emb_final, 1, 0))
-    # considering the influence of price
     elu_activation = torch.nn.ELU()
     price_cov_emb = elu_activation(price_cov_emb) + 1
     sess_price_cov = elu_activation(sess_price_cov) + 1
@@ -676,7 +605,6 @@ def train_test(model, train_data, test_data):
         loss = model.loss_function(scores + 1e-8, targets)
         loss = loss + con_loss
         loss.backward()
-        #        print(loss.item())
         model.optimizer.step()
         total_loss += loss
     print('\tLoss:\t%.3f' % total_loss)

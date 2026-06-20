@@ -1,7 +1,6 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 import openpyxl
-"""
     Deletion rules:
     1. Keyword filter,
     2. Aspect ratio severely imbalanced or too small,
@@ -10,7 +9,6 @@ import openpyxl
     5. Must not be questions,
     6. Text deduplication,
     7. Image deduplication
-"""
 forbidden_words = [
     "zombie", "ring", "sleep_with", "bed",
     "gang_rape", "mistress", "rape", "too_cruel", "steal_child", "idiot", "dumb", "moron", "retard",
@@ -40,7 +38,6 @@ def get_workbook(xlsx):
 
 
 def strQ2B(ustring):
-    """Convert full-width characters to half-width."""
     rstring = ""
     for uchar in ustring:
         inside_code = ord(uchar)
@@ -53,7 +50,6 @@ def strQ2B(ustring):
     return rstring
 
 def del_emoji(ustring):
-    """Remove emoji characters."""
     rstring = ""
     for uchar in ustring:
         inside_code = ord(uchar)

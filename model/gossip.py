@@ -1,6 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-# model/domain.py
 
 import logging
 
@@ -13,14 +12,12 @@ from transformers import BertModel, CLIPModel
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Try importing MAE model definition (mae.py in root)
 try:
     import mae
 except ImportError:
     logger.error("Failed to import mae. Ensure mae.py is in the project root.")
     raise
 
-# Try importing utils functions (utils.py in utils/ subdirectory)
 try:
     from utils.utils_gossipcop import clipdata2gpu, Averager, calculate_metrics, Recorder
 except ImportError as e:
@@ -37,8 +34,6 @@ except ImportError as e:
             'recall': recall_score(label_list, preds, average='macro', zero_division=0),
         }
 
-# Try importing custom layers and timm Block (layers.py, pivot.py in model/)
-# Note: if these files are missing or broken, provide proper implementations or placeholders
 try:
     from .layers import *  # Assuming layers.py imports successfully
     from .pivot import *
@@ -46,7 +41,6 @@ except ImportError:
     logger.warning("Failed to import .layers or .pivot. Using placeholder definitions if needed.")
 
 
-    # Define necessary placeholders (used if .layers import fails)
     class MaskAttention(nn.Module):
         def __init__(self, dim):
             super().__init__(); self.dim = dim
@@ -216,7 +210,6 @@ class AdaIN(nn.Module):
         return sigma * x_norm + mu
 
 
-# --- MultiDomainPLEFENDModel class ---
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims,
                  bert_path_or_name,
@@ -237,7 +230,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.bert_path = bert_path_or_name;
         self.clip_path = clip_path_or_name
 
-        # BERT
         try:
             logger.info(f"Loading BERT: {self.bert_path}")
             self.bert = BertModel.from_pretrained(self.bert_path, local_files_only=True)
@@ -247,7 +239,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         except Exception as e:
             logger.error(f"Failed BERT load {self.bert_path}: {e}")
             self.bert = None
-        # MAE
         self.model_size = "base";
         mae_cp = f'./mae_pretrain_vit_{self.model_size}.pth'
         try:
@@ -265,7 +256,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         except Exception as e:
             logger.exception(f"Failed MAE load: {e}")
             self.image_model = None
-        # CLIP
         try:
             logger.info(f"Loading CLIP: {self.clip_path}")
             self.clip_model = CLIPModel.from_pretrained(self.clip_path, local_files_only=True)
@@ -276,19 +266,11 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             logger.error(f"Failed CLIP load {self.clip_path}: {e}")
             self.clip_model = None
 
-        # Other layers
-        # !!! KEY CHANGE !!!
-        # Original fk = {1: 64} would output (Batch, 64) from cnn_extractor
-        # This conflicts with text_experts_feature_sum init of (Batch, 320)
-        # Change fk to output 320-dim features
         fk = {1: 320}  # e.g. use one conv with kernel_size=1, output 320 features
-        # Or use multiple kernels with feature_num summing to 320:
-        # fk = {1: 100, 2: 120, 3: 100}  # example: 100+120+100 = 320
 
         expert_count = self.num_expert  # 6
         shared_count = expert_count * 2  # 12
 
-        # Experts (using cnn_extractor which should now output 320-dim features)
         self.text_experts = nn.ModuleList(
             [nn.ModuleList([cnn_extractor(self.text_dim, fk) for _ in range(expert_count)]) for _ in
              range(self.domain_num)])
@@ -308,7 +290,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             [nn.Sequential(nn.Linear(320, 320), nn.SiLU(), nn.Linear(320, 320)) for _ in range(shared_count)]) for _ in
                                                   range(self.num_share)])
 
-        # Gates
         gate_out_dim = expert_count + shared_count  # 6 + 12 = 18
         fusion0_out_dim = expert_count * 3  # 6 * 3 = 18
 
@@ -324,8 +305,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                                                               nn.Linear(160, fusion0_out_dim), nn.Dropout(dropout),
                                                               nn.Softmax(dim=1)) for _ in range(self.domain_num)])
 
-        # Use MaskAttention and TokenAttention from layers.py (if imported)
-        # Otherwise use placeholder versions
         self.text_attention = MaskAttention(self.unified_dim)
         self.image_attention = TokenAttention(self.unified_dim)
 
@@ -338,8 +317,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.MLP_fusion = MLP_fusion(960, 320, h_dims, dropout)
         self.domain_fusion = MLP_fusion(320, 320, h_dims, dropout)
         self.MLP_fusion0 = MLP_fusion(768 * 2, 768, h_dims, dropout)
-        # clip_fusion in layers.py is called 'clip_fuion', ensure consistency or use MLP_fusion
-        # Assuming MLP_fusion is generic enough or layers.py's clip_fuion is used if imported
         self.clip_fusion = MLP_fusion(1024, 320, h_dims, dropout)
 
         self.att_mlp_text = MLP_fusion(320, 2, [174], dropout)
@@ -411,14 +388,12 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         text_gate_out = self.text_gate_list[domain_idx](text_atn_feature)
         image_gate_out = self.image_gate_list[domain_idx](image_atn_feature)
 
-        # Text Experts Calculation
         output_shape_text = (batch_size, 320);
         text_experts_feature_sum = torch.zeros(output_shape_text, device=device);
         text_gate_share_expert_value_sum = torch.zeros(output_shape_text, device=device)
         for j in range(self.num_expert):
             tmp = self.text_experts[domain_idx][j](text_feature_seq)  # Expected shape (B, 320) with corrected fk
             gate_val_for_expert = text_gate_out[:, j].unsqueeze(1)  # Expected shape (B, 1)
-            # Now (B, 320) += (B, 320) * (B, 1) should work
             text_experts_feature_sum += (tmp * gate_val_for_expert)
         for j in range(self.num_expert * 2):
             tmp = self.text_share_expert[0][j](text_feature_seq)
@@ -428,7 +403,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         att_text = F.softmax(self.att_mlp_text(text_experts_feature_sum), dim=-1)
         text_gate_expert_value = [att_text[:, i].unsqueeze(1) * text_experts_feature_sum for i in range(2)]
 
-        # Image Experts Calculation
         output_shape_image = (batch_size, 320);
         image_experts_feature_sum = torch.zeros(output_shape_image, device=device);
         image_gate_share_expert_value_sum = torch.zeros(output_shape_image, device=device)
@@ -444,7 +418,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         att_img = F.softmax(self.att_mlp_img(image_experts_feature_sum), dim=-1)
         image_gate_expert_value = [att_img[:, i].unsqueeze(1) * image_experts_feature_sum for i in range(2)]
 
-        # Fusion Modality Processing
         text_for_fusion = text_gate_share_expert_value_sum;
         image_for_fusion = image_gate_share_expert_value_sum
         fusion_share_feature_in = torch.cat((clip_fusion_feature, text_for_fusion, image_for_fusion), dim=-1);
@@ -464,7 +437,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         att_mm = F.softmax(self.att_mlp_mm(fusion_experts_feature_sum), dim=-1)
         fusion_gate_expert_value0 = [att_mm[:, i].unsqueeze(1) * fusion_experts_feature_sum for i in range(2)]
 
-        # Final Classification
         text_final_features = text_gate_expert_value[0];
         image_final_features = image_gate_expert_value[0];
         fusion_final_features = fusion_gate_expert_value0[0]
@@ -476,7 +448,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         return final_logits, text_logits, image_logits, fusion_logits
 
 
-# --- Trainer Class ---
 class Trainer():
     def __init__(self, emb_dim, mlp_dims,
                  bert_path_or_name, clip_path_or_name,
@@ -496,7 +467,6 @@ class Trainer():
         self.emb_dim = emb_dim;
         self.mlp_dims = mlp_dims;
         self.dropout = dropout
-        # self.metric_key_for_early_stop will be the passed value or default 'acc'
         self.metric_key_for_early_stop = metric_key_for_early_stop
         self.save_param_dir = save_param_dir
         os.makedirs(self.save_param_dir, exist_ok=True)
@@ -520,7 +490,6 @@ class Trainer():
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.lr,
                                       weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.98)
-        # Recorder will use self.metric_key_for_early_stop (defaults to 'acc' or passed value)
         recorder = Recorder(self.early_stop, metric_key=self.metric_key_for_early_stop)
 
         for epoch in range(self.epoches):
@@ -554,7 +523,6 @@ class Trainer():
                 except Exception as e:
                     if "size of tensor a" in str(e) and "must match the size of tensor b" in str(e):
                         logger.error(f"Tensor mismatch error at Train step {epoch}-{step_n}: {e}", exc_info=True)
-                    # Log image processing warnings/errors in detail
                     elif "collate_fn" in str(e) or "image" in str(e).lower() or "channel" in str(e).lower():
                         logger.error(f"Image processing related error at Train step {epoch}-{step_n}: {e}",
                                      exc_info=True)
@@ -568,13 +536,8 @@ class Trainer():
 
             if self.val_loader is None:
                 logger.warning("Val loader not provided, skipping validation.")
-                # If no val set, consider saving the last epoch model here or skipping validation-based saves
-                # last_epoch_model_path = os.path.join(self.save_param_dir, f'model_epoch_{epoch+1}.pth')
-                # torch.save(self.model.state_dict(), last_epoch_model_path)
-                # logger.info(f"Saved model from last training epoch to {last_epoch_model_path}")
                 continue  # Skip validation
 
-            # Validation logic
             try:
                 val_results = self.test(self.val_loader)
                 if not val_results:  # Check if val_results is empty or invalid
@@ -582,7 +545,6 @@ class Trainer():
                         f"Val epoch {epoch + 1} did not return valid results. Skipping score processing for this epoch.")
                     continue
 
-                # Safely get metrics from val_results, default to 0.0 if key missing
                 current_metric_val = val_results.get(self.metric_key_for_early_stop, 0.0)
                 acc_val = val_results.get('acc', 0.0)
                 f1_val = val_results.get('F1', 0.0)
@@ -593,7 +555,6 @@ class Trainer():
                 logger.info(f"  Real:{repr(val_results.get('real', {}))}, Fake:{repr(val_results.get('fake', {}))}")
 
                 mark = recorder.add(val_results)  # recorder.add should handle empty val_results if designed to
-                # Or ensure val_results always has the keys Recorder expects
                 if mark == 'save':
                     save_p = os.path.join(self.save_param_dir, 'best_model.pth')
                     torch.save(self.model.state_dict(), save_p)
@@ -613,7 +574,6 @@ class Trainer():
         if os.path.exists(best_model_path):
             logger.info(f"Loading best model for final test: {best_model_path}")
             try:
-                # Ensure model instance exists and structure matches before loading state dict
                 self.model.load_state_dict(torch.load(best_model_path, map_location=lambda storage, loc: storage))
                 loaded_best = True
             except Exception as e:
@@ -637,7 +597,6 @@ class Trainer():
             try:
                 final_results = self.test(self.test_loader)  # Call test, returns dict with detailed metrics
                 if final_results:
-                    # Print overall metrics
                     acc = final_results.get('acc', 0.0);
                     f1 = final_results.get('F1', 0.0);
                     auc = final_results.get('auc', 0.0)
@@ -646,11 +605,9 @@ class Trainer():
                     logger.info(
                         f"Final Test Results: Acc:{acc:.4f} F1:{f1:.4f} AUC:{auc:.4f} Precision:{precision:.4f} Recall:{recall:.4f}")
 
-                    # --- KEY CHANGE: print Real/Fake metrics ---
                     real_m = final_results.get('Real', {})  # Get 'Real' sub-dict from results
                     fake_m = final_results.get('Fake', {})  # Get 'Fake' sub-dict from results
 
-                    # Use .get('metric', 0.0) to safely get values, show 0.0 if key missing
                     log_final_class_summary = (
                         f"  Real (label=1): P:{real_m.get('precision', 0.0):.4f} "
                         f"R:{real_m.get('recall', 0.0):.4f} "
@@ -708,14 +665,12 @@ class Trainer():
             logger.warning("No data was successfully processed in test function to calculate metrics.")
             return {}
 
-        # Ensure category_list matches label_list length, even if some are None
         if len(category_list) != len(label_list) and self.category_dict:
             logger.warning(
                 f"Mismatch in length of category_list ({len(category_list)}) and label_list ({len(label_list)}). Filling with None.")
             category_list = (category_list + [None] * len(label_list))[:len(label_list)]
 
         try:
-            # Only pass category_list if category_dict is not None or empty
             if self.category_dict:
                 metric_res = calculate_metrics(label_list, pred_probs, category_list, self.category_dict)
             else:

@@ -11,12 +11,10 @@ from torchvision import datasets, models, transforms
 import os
 from PIL import Image, ImageFile
 
-# Allow loading truncated images
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 def read_image():
-    """Load and preprocess images, use black placeholder for corrupted ones."""
     image_list = {}
     file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     data_transforms = transforms.Compose([
@@ -50,7 +48,6 @@ def _init_fn(worker_id):
 
 
 def read_pkl(path):
-    """Safely load a pickle file."""
     try:
         with open(path, "rb") as f:
             t = pickle.load(f)
@@ -62,15 +59,12 @@ def read_pkl(path):
 
 
 def df_filter(df_data):
-    """Filter data with undetermined category."""
     df_data = df_data[df_data['category'] != 'cannot determine']
     return df_data
 
 
 def word2input(texts, vocab_file, max_len):
-    """
     BERT tokenization with automatic fallback for missing/invalid text.
-    """
     if not os.path.exists(vocab_file):
         raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
 
@@ -79,7 +73,6 @@ def word2input(texts, vocab_file, max_len):
     skipped_count = 0
 
     for i, text in enumerate(texts):
-        # Handle None, NaN, non-string
         if text is None or (isinstance(text, float) and pd.isna(text)) or not isinstance(text, str):
             skipped_count += 1
             if skipped_count <= 5:
@@ -124,7 +117,6 @@ class bert_data():
         self.category_dict = category_dict
 
     def load_data(self, path, ttv, shuffle, text_only=False):
-        # Read CSV
         try:
             self.data = pd.read_csv(path, encoding='utf-8')
         except FileNotFoundError:
@@ -132,13 +124,11 @@ class bert_data():
         except Exception as e:
             raise ValueError(f"[ERROR] Failed to read CSV {path}: {e}")
 
-        # Validate columns
         required_cols = ['content', 'label', 'category']
         missing_cols = [c for c in required_cols if c not in self.data.columns]
         if missing_cols:
             raise KeyError(f"[ERROR] Missing required columns in {path}: {missing_cols}")
 
-        # Remove rows with missing text
         original_len = len(self.data)
         self.data = self.data.dropna(subset=['content'])
         self.data['content'] = self.data['content'].fillna('').astype(str)
@@ -153,7 +143,6 @@ class bert_data():
         category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        # Safely load pickle
         try:
             ordered_image = pickle.load(open(ttv, 'rb'))
         except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:

@@ -1,9 +1,5 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-"""
-DDIN.py - DDIN: Domain-aware Disentangled Interaction Network
-Integrated version - primary implementation with original design notes preserved at the end
-"""
 
 import os
 import tqdm
@@ -23,9 +19,6 @@ from copy import deepcopy
 import math
 
 
-# =========================================================================
-# FGM Adversarial Training
-# =========================================================================
 class FGM():
     def __init__(self, model, epsilon=0.5):
         self.model = model
@@ -49,9 +42,6 @@ class FGM():
         self.backup = {}
 
 
-# =========================================================================
-# EMA (Exponential Moving Average)
-# =========================================================================
 class EMA():
     def __init__(self, model, decay=0.999):
         self.model = model
@@ -87,9 +77,6 @@ class EMA():
         self.backup = {}
 
 
-# =========================================================================
-# Warmup + Cosine Annealing Learning Rate Scheduler
-# =========================================================================
 class WarmupCosineAnnealingLR:
     def __init__(self, optimizer, warmup_epochs, max_epochs, eta_min=0):
         self.optimizer = optimizer
@@ -112,14 +99,9 @@ class WarmupCosineAnnealingLR:
                 param_group['lr'] = lr
 
 
-# =========================================================================
-# Multi-Scale Semantic Projection Layer
-# =========================================================================
 class MultiScaleSemanticProjection(nn.Module):
-    """
     Multi-scale semantic projection layer - captures polysemy through
     multiple parallel projection channels.
-    """
 
     def __init__(self, input_dim, output_dim, num_scales=3):
         super(MultiScaleSemanticProjection, self).__init__()
@@ -139,14 +121,9 @@ class MultiScaleSemanticProjection(nn.Module):
         return self.fusion(fused)
 
 
-# =========================================================================
-# Hierarchical Conflict Synergy Network
-# =========================================================================
 class HierarchicalConflictSynergy(nn.Module):
-    """
     Hierarchical conflict synergy - enables cross-granularity conflict
     features to communicate with each other through a Transformer block.
-    """
 
     def __init__(self, hidden_dim, num_heads=4):
         super(HierarchicalConflictSynergy, self).__init__()
@@ -159,21 +136,14 @@ class HierarchicalConflictSynergy(nn.Module):
         )
 
     def forward(self, conflict_ll, conflict_gl, conflict_gg):
-        # Stack the three conflict features into a sequence
         conflicts = torch.stack([conflict_ll, conflict_gl, conflict_gg], dim=1)  # [B, 3, D]
-        # Propagate conflicts through the Transformer
         synergized = self.transformer_block(conflicts)  # [B, 3, D]
         return synergized[:, 0], synergized[:, 1], synergized[:, 2]
 
 
-# =========================================================================
-# Domain-Adaptive Inconsistency Weighting Module
-# =========================================================================
 class DomainAdaptiveWeighting(nn.Module):
-    """
     Domain-adaptive weighting - dynamically adjusts the importance of
     different conflict signals based on the news domain.
-    """
 
     def __init__(self, num_domains, hidden_dim):
         super(DomainAdaptiveWeighting, self).__init__()
@@ -186,11 +156,8 @@ class DomainAdaptiveWeighting(nn.Module):
         )
 
     def forward(self, domain_ids, conflict_ll, conflict_gl, conflict_gg):
-        # Get domain embeddings
         domain_emb = self.domain_embeddings(domain_ids)  # [B, D]
-        # Generate gate weights
         gates = self.gate_network(domain_emb)  # [B, 3]
-        # Weighted fusion
         weighted_conflict = (
                 gates[:, 0:1] * conflict_ll +
                 gates[:, 1:2] * conflict_gl +
@@ -199,40 +166,28 @@ class DomainAdaptiveWeighting(nn.Module):
         return weighted_conflict, gates
 
 
-# =========================================================================
-# DDIN Main Model
-# =========================================================================
 class DDIN(nn.Module):
-    """
     DDIN: Domain-aware Disentangled Interaction Network
     Multimodal fake news detection model.
-    """
 
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
                  num_domains=9, hidden_dim=768, num_classes=2, dropout=0.2):
         super(DDIN, self).__init__()
         self.dropout = dropout
 
-        # ===== (a) Dual-Stream Multi-Granularity Feature Extraction =====
-        # BERT for local text features
         self.bert = BertModel.from_pretrained(bert_model_path)
 
-        # MAE for local image features
         self.mae = mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
         checkpoint = torch.load(mae_model_path, map_location='cpu')
         self.mae.load_state_dict(checkpoint['model'], strict=False)
 
-        # CLIP for global features
         self.clip_model, _ = load_from_name(clip_model_name, download_root='./model_weights/clip_cn/')
 
-        # ===== (b) Multi-Scale Semantic Projection Layers =====
         self.text_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.image_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.text_global_proj = MultiScaleSemanticProjection(512, hidden_dim, num_scales=3)
         self.image_global_proj = MultiScaleSemanticProjection(512, hidden_dim, num_scales=3)
 
-        # ===== (c) Multi-Granularity Cross-Modal Inconsistency Mining =====
-        # Global-Global Inconsistency
         self.gg_inconsistency = nn.Sequential(
             nn.Linear(hidden_dim * 3, hidden_dim),
             nn.ReLU(),
@@ -240,7 +195,6 @@ class DDIN(nn.Module):
             nn.Linear(hidden_dim, hidden_dim)
         )
 
-        # Local-Local Inconsistency (Cross-Attention)
         self.ll_cross_attn = nn.MultiheadAttention(hidden_dim, num_heads=8, batch_first=True)
         self.ll_inconsistency = nn.Sequential(
             nn.Conv1d(2, hidden_dim, kernel_size=1),
@@ -248,7 +202,6 @@ class DDIN(nn.Module):
             nn.AdaptiveAvgPool1d(1)
         )
 
-        # Global-Local Inconsistency
         self.gl_cross_transformer = Block(
             dim=hidden_dim,
             num_heads=8,
@@ -257,13 +210,10 @@ class DDIN(nn.Module):
             norm_layer=nn.LayerNorm
         )
 
-        # ===== (d) Hierarchical Conflict Synergy Network =====
         self.conflict_synergy = HierarchicalConflictSynergy(hidden_dim, num_heads=4)
 
-        # ===== (e) Domain-Adaptive Inconsistency Weighting & Fusion =====
         self.domain_weighting = DomainAdaptiveWeighting(num_domains, hidden_dim)
 
-        # ===== (f) Domain-Adaptive Multimodal Global Fusion =====
         self.final_fusion = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim * 2),
             nn.ReLU(),
@@ -271,41 +221,31 @@ class DDIN(nn.Module):
             nn.Linear(hidden_dim * 2, hidden_dim)
         )
 
-        # Classifier
         self.classifier = nn.Linear(hidden_dim, num_classes)
 
-        # Auxiliary classifiers (for multi-task learning)
         self.fusion_classifier = nn.Linear(hidden_dim, num_classes)
         self.image_classifier = nn.Linear(hidden_dim, num_classes)
         self.text_classifier = nn.Linear(hidden_dim, num_classes)
 
     def forward(self, content, content_masks, image, category, **kwargs):
-        # Get CLIP-specific inputs from kwargs
         clip_text = kwargs.get('clip_text', content)
         clip_image = kwargs.get('clip_image', image)
 
-        # ===== Feature Extraction =====
-        # Local text features (BERT)
         bert_output = self.bert(content, attention_mask=content_masks)
         text_local = bert_output.last_hidden_state  # [B, L, 768]
 
-        # Local image features (MAE)
         with torch.no_grad():
             mae_output = self.mae.forward_encoder(image, mask_ratio=0)
             image_local = mae_output[0]  # [B, P, 768]
 
-        # Global features (CLIP) - use dedicated CLIP tokenized inputs
         text_global = self.clip_model.encode_text(clip_text)  # [B, 512]
         image_global = self.clip_model.encode_image(clip_image)  # [B, 512]
 
-        # ===== Multi-Scale Semantic Projection =====
         text_local_proj = self.text_local_proj(text_local.mean(dim=1))  # [B, D]
         image_local_proj = self.image_local_proj(image_local.mean(dim=1))  # [B, D]
         text_global_proj = self.text_global_proj(text_global)  # [B, D]
         image_global_proj = self.image_global_proj(image_global)  # [B, D]
 
-        # ===== Multi-Granularity Cross-Modal Inconsistency Mining =====
-        # 1. Global-Global Inconsistency
         gg_concat = torch.cat([
             text_global_proj,
             image_global_proj,
@@ -313,31 +253,25 @@ class DDIN(nn.Module):
         ], dim=-1)
         conflict_gg = self.gg_inconsistency(gg_concat)  # [B, D]
 
-        # 2. Local-Local Inconsistency
         _, attn_weights = self.ll_cross_attn(
             text_local, image_local, image_local
         )
         row_max = attn_weights.max(dim=-1)[0]  # [B, L]
         col_max = attn_weights.max(dim=-2)[0]  # [B, P]
-        # Simplified: take the mean over all positions
         ll_features = torch.stack([row_max.mean(dim=1), col_max.mean(dim=1)], dim=1)  # [B, 2]
         conflict_ll = self.ll_inconsistency(ll_features.unsqueeze(-1)).squeeze(-1)  # [B, D]
 
-        # 3. Global-Local Inconsistency
         gl_concat = torch.stack([text_global_proj, image_local_proj], dim=1)  # [B, 2, D]
         conflict_gl = self.gl_cross_transformer(gl_concat).mean(dim=1)  # [B, D]
 
-        # ===== Hierarchical Conflict Synergy =====
         conflict_ll_syn, conflict_gl_syn, conflict_gg_syn = self.conflict_synergy(
             conflict_ll, conflict_gl, conflict_gg
         )
 
-        # ===== Domain-Adaptive Weighting =====
         adaptive_conflict, gate_weights = self.domain_weighting(
             category, conflict_ll_syn, conflict_gl_syn, conflict_gg_syn
         )
 
-        # ===== Global Fusion =====
         fusion_input = torch.cat([
             text_global_proj,
             image_global_proj,
@@ -346,7 +280,6 @@ class DDIN(nn.Module):
         ], dim=-1)
         fused_features = self.final_fusion(fusion_input)  # [B, D]
 
-        # ===== Classification =====
         final_pred = self.classifier(fused_features)
         fusion_pred = self.fusion_classifier(adaptive_conflict)
         image_pred = self.image_classifier(image_global_proj)
@@ -356,36 +289,26 @@ class DDIN(nn.Module):
             fused_features, adaptive_conflict, text_global_proj, image_global_proj
 
 
-# =========================================================================
-# Contrastive Loss
-# =========================================================================
 class AdaptiveContrastiveLoss(nn.Module):
-    """
     Adaptive contrastive loss - enhances cross-modal consistency learning.
     Uses log_softmax for numerical stability and excludes self-pairs.
-    """
 
     def __init__(self, temperature=0.07):
         super(AdaptiveContrastiveLoss, self).__init__()
         self.temperature = temperature
 
     def forward(self, text_features, image_features, labels):
-        # Normalize
         text_features = nn.functional.normalize(text_features, dim=-1)
         image_features = nn.functional.normalize(image_features, dim=-1)
 
-        # Compute similarity matrix [B, B]
         similarity = torch.matmul(text_features, image_features.T) / self.temperature
 
-        # Build positive mask (exclude self)
         labels = labels.view(-1, 1)
         pos_mask = (labels == labels.T).float()
         pos_mask.fill_diagonal_(0.0)  # exclude self-pairs
 
-        # Use log_softmax for numerical stability
         log_prob = similarity.log_softmax(dim=1)
 
-        # Average log-probability of positive pairs
         pos_sum = (log_prob * pos_mask).sum(dim=1)
         pos_count = pos_mask.sum(dim=1).clamp(min=1)
         loss = -(pos_sum / pos_count).mean()
@@ -393,9 +316,6 @@ class AdaptiveContrastiveLoss(nn.Module):
         return loss
 
 
-# =========================================================================
-# Trainer Class
-# =========================================================================
 class Trainer():
     def __init__(self, emb_dim, mlp_dims, bert, use_cuda, lr, dropout,
                  train_loader, val_loader, test_loader, category_dict,
@@ -419,7 +339,6 @@ class Trainer():
         self.use_ema = use_ema
         self.contrastive_weight = contrastive_weight
 
-        # Initialize model
         num_domains = len(category_dict)
         self.model = DDIN(
             bert_model_path=bert,
@@ -436,11 +355,9 @@ class Trainer():
         if self.use_cuda:
             self.model = self.model.cuda()
 
-        # Loss functions
         self.criterion = nn.CrossEntropyLoss()
         self.contrastive_loss = AdaptiveContrastiveLoss()
 
-        # Optimizer - layer-wise learning rates (BERT: 0.1x base LR)
         bert_params = list(self.model.bert.parameters())
         other_params = [p for n, p in self.model.named_parameters()
                         if 'bert' not in n]
@@ -450,7 +367,6 @@ class Trainer():
             {'params': other_params, 'lr': lr}
         ], weight_decay=weight_decay)
 
-        # Learning rate scheduler
         self.scheduler = WarmupCosineAnnealingLR(
             self.optimizer,
             warmup_epochs=3,
@@ -462,17 +378,14 @@ class Trainer():
         if logger:
             logger.info('Start training...')
 
-        # Ensure save directory exists
         os.makedirs(self.save_param_dir, exist_ok=True)
 
-        # Initialize FGM and EMA
         fgm = FGM(self.model, epsilon=0.5) if self.use_fgm else None
         ema = EMA(self.model, decay=0.999) if self.use_ema else None
 
         recorder = Recorder(self.early_stop)
 
         for epoch in range(self.epoches):
-            # LR scheduling (schedule before training to avoid warmup lag)
             self.scheduler.step()
             self.model.train()
             avg_loss = Averager()
@@ -487,11 +400,9 @@ class Trainer():
 
                 self.optimizer.zero_grad()
 
-                # Forward pass
                 final_pred, fusion_pred, image_pred, text_pred, \
                     fused_feat, adaptive_conflict, text_feat, image_feat = self.model(**batch_data)
 
-                # Classification loss
                 cls_loss = (
                         self.criterion(final_pred, batch_label) +
                         0.5 * self.criterion(fusion_pred, batch_label) +
@@ -499,15 +410,12 @@ class Trainer():
                         0.3 * self.criterion(text_pred, batch_label)
                 )
 
-                # Adaptive contrastive loss
                 adaptive_con_loss = self.contrastive_loss(text_feat, image_feat, batch_label)
                 batch_adaptive_weight = torch.tensor([self.contrastive_weight]).to(batch_label.device)
 
-                # Total loss
                 loss = cls_loss + batch_adaptive_weight * adaptive_con_loss
                 loss.backward()
 
-                # FGM adversarial training
                 if self.use_fgm and fgm:
                     fgm.attack()
                     final_pred_adv, fusion_pred_adv, image_pred_adv, text_pred_adv, \
@@ -526,7 +434,6 @@ class Trainer():
                     loss_adv.backward()
                     fgm.restore()
 
-                # Unified gradient clipping (clean + adversarial gradients)
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                 self.optimizer.step()
                 if self.use_ema and ema:
@@ -562,7 +469,6 @@ class Trainer():
             else:
                 continue
 
-        # Load best EMA checkpoint (checkpoint already contains EMA weights, use directly)
         self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl')))
         results0, results1, results2, results3 = self.test(self.test_loader)
         if logger:
@@ -601,36 +507,3 @@ class Trainer():
             metrics(label, pred1, category, self.category_dict), \
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
-
-
-# =========================================================================
-# Original Design Notes (preserved for reference)
-# =========================================================================
-"""
-# Original code design (run.py):
-
-# 1. Data loader design:
-#    - GossipCop: uses dataset + collate_fn_gossipcop
-#    - Weibo: uses utils.wloader.bert_data
-#    - Weibo21: uses utils.w21ld.bert_data
-#
-# 2. Trainer selection:
-#    - GossipCop: model.gossip.Trainer
-#    - Weibo/Weibo21: model.weibo.Trainer
-#
-# 3. Configuration management:
-#    - All parameters passed via config dict
-#    - Supports dataset-specific path configuration
-#    - Supports BERT/CLIP model path configuration
-#
-# 4. Training pipeline:
-#    - Run class handles data loading and Trainer initialization
-#    - Trainer class handles the actual training and testing
-#    - Supports early stopping and model checkpointing
-#
-# 5. Key features:
-#    - Logger-based logging
-#    - Exception handling and error messages
-#    - Modular design for easy extension
-#    - Supports multiple datasets and models
-"""
