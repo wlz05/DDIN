@@ -29,7 +29,7 @@ class Run():
         self.weight_decay = config['weight_decay']
         self.epoch = config['epoch']
         self.save_param_dir = config['save_param_dir']
-        self.dataset = config['dataset']
+        self.dataset = config['dataset'].lower()
 
         if config['dataset'] == "weibo":
             self.root_path = './weibo/'

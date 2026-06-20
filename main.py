@@ -29,6 +29,7 @@ parser.add_argument('--w2v_vocab_file', default='./pretrained_model/w2v/Tencent_
 parser.add_argument('--save_param_dir', default= './param_model')
 
 args = parser.parse_args()
+args.dataset = args.dataset.lower()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 seed = args.seed
