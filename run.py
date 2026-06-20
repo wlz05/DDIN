@@ -41,7 +41,7 @@ class Run():
                 "Politics": 4, "International": 5, "Education": 6, "Entertainment": 7, "Society": 8
             }
         elif config['dataset'] == "weibo21":
-            self.root_path = './Weibo21/'
+            self.root_path = './weibo21/'
             self.train_path = self.root_path + 'train_datasets.xlsx'
             self.val_path = self.root_path + 'val_datasets.xlsx'
             self.test_path = self.root_path + 'test_datasets.xlsx'
@@ -77,9 +77,9 @@ class Run():
             val_loader = loader.load_data(self.val_path, 'data/val_loader.pkl', 'data/val_clip_loader.pkl', False)
             test_loader = loader.load_data(self.test_path, 'data/test_loader.pkl', 'data/test_clip_loader.pkl', False)
         elif dataset == "weibo21":
-            train_loader = loader.load_data(self.train_path, 'Weibo21/train_loader.pkl', 'Weibo21/train_clip_loader.pkl', True)
-            val_loader = loader.load_data(self.val_path, 'Weibo21/val_loader.pkl', 'Weibo21/val_clip_loader.pkl', False)
-            test_loader = loader.load_data(self.test_path, 'Weibo21/test_loader.pkl', 'Weibo21/test_clip_loader.pkl', False)
+            train_loader = loader.load_data(self.train_path, 'weibo21/train_loader.pkl', 'weibo21/train_clip_loader.pkl', True)
+            val_loader = loader.load_data(self.val_path, 'weibo21/val_loader.pkl', 'weibo21/val_clip_loader.pkl', False)
+            test_loader = loader.load_data(self.test_path, 'weibo21/test_loader.pkl', 'weibo21/test_clip_loader.pkl', False)
         elif dataset == "finefake":
             ff_dir = self.root_path
             train_loader = loader.load_data(self.train_path, ff_dir + 'f_train_loader.pkl',
