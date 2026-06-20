@@ -30,7 +30,8 @@ class dataset(data.Dataset):
         data_augment=False,
         duplicate_fake_times=0,
         bert_max_len=197,
-        clip_max_len=77
+        clip_max_len=77,
+        category_dict=None
     ):
         # Tokenizer/Processor are injected externally
         self.bert_tokenizer = bert_tokenizer_instance
@@ -123,6 +124,13 @@ class dataset(data.Dataset):
         if not os.path.isdir(image_base_dir): raise FileNotFoundError(f"Expected image directory not found: {image_base_dir}")
         logger.info(f"Image base directory: {image_base_dir}")
 
+        # Determine category column and mapping
+        category_col = None
+        if 'category' in data_df.columns:
+            category_col = 'category'
+        elif 'domain' in data_df.columns:
+            category_col = 'domain'
+
         for idx, row in data_df.iterrows():
             try: label = int(row[label_col]); assert label in [0, 1]
             except: skipped_num += 1; continue
@@ -130,7 +138,13 @@ class dataset(data.Dataset):
             potential_image_paths = [ os.path.join(image_base_dir, f"{image_id}{ext}") for ext in ['', '.jpg', '.png', '.jpeg']]
             full_image_path = next((p for p in potential_image_paths if os.path.exists(p) and os.path.isfile(p)), None)
             if full_image_path is None: skipped_num += 1; continue
-            record = {"image_path": full_image_path, "label": label, "content": content, "category": 0}
+            # Read category from CSV if available, otherwise default to 0
+            if category_col and category_dict:
+                cat_str = str(row[category_col])
+                category_val = category_dict.get(cat_str, 0)
+            else:
+                category_val = 0
+            record = {"image_path": full_image_path, "label": label, "content": content, "category": category_val}
             self.label_dict.append(record)
             if record["label"] == 0 and self.is_train and self.duplicate_fake_times > 0:  # duplicate Fake (label=0)
                 for _ in range(self.duplicate_fake_times): self.label_dict.append(record)
