@@ -74,11 +74,11 @@ DDIN/
 │   └── fp16.py                # Mixed precision utils
 ├── utils/
 │   ├── loader.py              # Generic data loader
-│   ├── clipld.py              # Weibo data loader (CSV + CLIP + BERT)
+│   ├── clipld.py              # Weibo data loader (CSV -> data/)
 │   ├── wloader.py             # Weibo CLIP image loader
-│   ├── w21ld.py               # Weibo21 data loader (Excel + CLIP + BERT)
+│   ├── w21ld.py               # Weibo21 data loader (Excel -> Weibo21/)
 │   ├── utils.py               # Metrics, Recorder, clipdata2gpu, data2gpu
-│   ├── extract.py             # FineFake CLIP feature extraction
+│   ├── extract.py             # FineFake CLIP feature extraction -> FineFake/
 │   ├── fsplit.py              # Fast data split
 │   ├── fiximg.py              # Image fix utils
 │   ├── datasets.py            # Dataset processing
@@ -88,8 +88,8 @@ DDIN/
 │   ├── sched.py               # LR scheduling
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
-├── Weibo21/
-│   ├── data.py                # Weibo21 data processing
+├── Weibo21/                 # Weibo21 dataset
+│   ├── data.py                # Weibo21 data processing v1
 │   ├── data2.py               # Weibo21 data processing v2
 │   ├── probe.py               # Weibo21 experiment script
 │   └── config.py              # Weibo21 configuration
@@ -98,10 +98,10 @@ DDIN/
 ├── mae.py                     # MAE ViT model (Masked Autoencoder)
 ├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
 ├── feature.py                 # t-SNE feature visualization (graceful fallback)
-├── preproc.py                 # Weibo MAE image preprocessing (9-class dict)
-├── clipprep.py                # Weibo CLIP image preprocessing (9-class dict)
-├── w21prep.py                 # Weibo21 MAE image preprocessing (9-class dict)
-├── w21clip.py                 # Weibo21 CLIP image preprocessing (9-class dict)
+├── preproc.py                 # Weibo MAE image preprocessing -> data/
+├── clipprep.py                # Weibo CLIP image preprocessing -> data/
+├── w21prep.py                 # Weibo21 MAE image preprocessing -> Weibo21/
+├── w21clip.py                 # Weibo21 CLIP image preprocessing -> Weibo21/
 ├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
 ├── requirements.txt           # Dependencies (fixed: torch, timm, etc.)           # Dependencies (fixed format)
@@ -180,16 +180,18 @@ mkdir -p ./model_weights/clip_cn/
 
 ## 🚀 Quick Start
 
+> **Dataset folders:** `data/` (Weibo) · `Weibo21/` (Weibo21) · `FineFake/` (FineFake)
+
 ### 0. Preprocess Images (required before first run)
 
 ```bash
-# Weibo: extract MAE + CLIP image features
+# Weibo -> data/
 python preproc.py && python clipprep.py
 
-# Weibo21: extract MAE + CLIP image features
+# Weibo21 -> Weibo21/
 python w21prep.py && python w21clip.py
 
-# FineFake: extract CLIP image features
+# FineFake -> FineFake/
 python utils/extract.py
 ```
 
@@ -227,32 +229,38 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 
 ### Dataset Format
 
-#### Weibo Dataset
+#### Weibo (`data/`)
 ```
-./data/
+data/
 ├── train_origin.csv
 ├── val_origin.csv
-└── test_origin.csv
+├── test_origin.csv
+├── nonrumor_images/
+└── rumor_images/
 ```
 
-#### Weibo21 Dataset
+#### Weibo21 (`Weibo21/`)
 ```
-./Weibo21/
+Weibo21/
 ├── train_datasets.xlsx
 ├── val_datasets.xlsx
-└── test_datasets.xlsx
+├── test_datasets.xlsx
+├── nonrumor_images/
+└── rumor_images/
 ```
 
-#### FineFake Dataset
+#### FineFake (`FineFake/`)
 
-FineFake is a multimodal fake news dataset with **6 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict. Supports both DDIN and GossipCop model variants.
+FineFake is a multimodal fake news dataset with **6 semantic domains** (ref: [arXiv:2404.01336](https://arxiv.org/abs/2404.01336)): Politics, Entertainment, Business, Health, Society, Conflict.
 
 ```
-./FineFake/
-├── FineFake.pkl                    # Main data file (text + image paths + labels)
-├── gossip_train.csv                # Training split (optional 'category' column for domain labels)
+FineFake/
+├── FineFake.pkl                    # Main data (text + image paths + labels)
+├── gossip_train.csv                # Training split (add 'category' column for domain labels)
 ├── gossip_test.csv                 # Test split
-└── gossip_train/                   # Training images
+├── gossip_train/                   # Training images
+├── f_train_loader.pkl              # MAE image features (from extract.py / fiximg.py)
+└── f_train_clip.pkl                # CLIP image features (from extract.py)
 ```
 
 **Extract CLIP features from FineFake:**
