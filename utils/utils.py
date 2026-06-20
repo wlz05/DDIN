@@ -5,6 +5,14 @@ import torch
 from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_score, roc_auc_score
 import numpy as np
 def clipdata2gpu(batch):
+    if isinstance(batch, dict):
+        # Dict batch (e.g. from FineFake dataset.py)
+        batch_data = {k: v.cuda() if hasattr(v, 'cuda') else v for k, v in batch.items()}
+        # Ensure 'clip_attention_mask' key if missing (backward compat)
+        if 'clip_attention_mask' not in batch_data and 'clip_text' in batch_data:
+            batch_data['clip_attention_mask'] = (batch_data['clip_text'] != 0).long()
+        return batch_data
+    # Tuple/list batch (weibo/weibo21 format)
     batch_data = {
         'content': batch[0].cuda(),
         'content_masks': batch[1].cuda(),
@@ -16,6 +24,9 @@ def clipdata2gpu(batch):
     }
     return batch_data
 def data2gpu(batch):
+    if isinstance(batch, dict):
+        batch_data = {k: v.cuda() if hasattr(v, 'cuda') else v for k, v in batch.items()}
+        return batch_data
     batch_data = {
         'content': batch[0].cuda(),
         'content_masks': batch[1].cuda(),
