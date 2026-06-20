@@ -32,6 +32,7 @@ parser.add_argument('--dataset', default='weibo', choices=['weibo', 'weibo21'], 
 parser.add_argument('--batchsize', type=int, default=64, help="Batch size for data loading.")
 parser.add_argument('--gpu', default='0', help="GPU device ID.")
 args = parser.parse_args()
+args.dataset = args.dataset.lower()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {DEVICE}")
