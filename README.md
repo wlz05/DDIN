@@ -52,15 +52,15 @@ Paper Link:
 ```
 DDIN/
 ├── model/
-│   ├── net.py                 # DDIN core model + Trainer
-│   ├── layers.py              # Base layers
+│   ├── net.py                 # DDIN core model + Trainer (dynamic num_domains)
+│   ├── layers.py              # Base layers (MLP, Attention, FocalLoss, etc.)
 │   ├── pivot.py               # Hypergraph convolution
 │   ├── bert.py                # BERT modules
-│   ├── domain.py              # Domain processing
-│   ├── weibo.py               # Weibo dataset adapter
-│   ├── w21.py                 # Weibo21 dataset adapter
-│   ├── gossip.py              # GossipCop dataset adapter
-│   ├── raw.py                 # Raw domain processing
+│   ├── domain.py              # Multi-domain PLE-FEND model variant
+│   ├── weibo.py               # Weibo domain model variant
+│   ├── w21.py                 # Weibo21 domain model variant
+│   ├── gossip.py              # GossipCop/FineFake model (dynamic num_domains)
+│   ├── raw.py                 # Raw DDIN model variant
 │   ├── clip.py                # CLIP domain module
 │   └── test.py                # Test script
 ├── cnn/
@@ -73,12 +73,12 @@ DDIN/
 │   ├── nn.py                  # Network modules
 │   └── fp16.py                # Mixed precision utils
 ├── utils/
-│   ├── loader.py              # Data loader
-│   ├── clipld.py              # CLIP data loader
-│   ├── wloader.py             # Weibo CLIP loader
-│   ├── w21ld.py               # Weibo21 CLIP loader
-│   ├── utils.py               # Metrics, recorder
-│   ├── extract.py             # FineFake extraction
+│   ├── loader.py              # Generic data loader
+│   ├── clipld.py              # Weibo data loader (CSV + CLIP + BERT)
+│   ├── wloader.py             # Weibo CLIP image loader
+│   ├── w21ld.py               # Weibo21 data loader (Excel + CLIP + BERT)
+│   ├── utils.py               # Metrics, Recorder, clipdata2gpu, data2gpu
+│   ├── extract.py             # FineFake CLIP feature extraction
 │   ├── fsplit.py              # Fast data split
 │   ├── fiximg.py              # Image fix utils
 │   ├── datasets.py            # Dataset processing
@@ -89,27 +89,34 @@ DDIN/
 │   ├── misc.py                # Miscellaneous utils
 │   └── pos.py                 # Positional encoding
 ├── w21/
-│   ├── data.py                # Data processing
-│   ├── data2.py               # Data processing v2
-│   ├── probe.py               # Experiment script
-│   └── config.py              # Configuration
-├── main.py                    # Entry point
-├── run.py                     # Training dispatch
-├── mae.py                     # MAE model
-├── dataset.py                 # FakeNet dataset
-├── feature.py                 # Feature extraction
-├── preproc.py                 # Preprocessing
-├── clipprep.py                # CLIP preprocessing
-├── w21prep.py                 # Weibo21 preprocessing
-├── w21clip.py                 # Weibo21 CLIP preprocessing
-├── split.py                   # Split utility
+│   ├── data.py                # Weibo21 data processing
+│   ├── data2.py               # Weibo21 data processing v2
+│   ├── probe.py               # Weibo21 experiment script
+│   └── config.py              # Weibo21 configuration
+├── main.py                    # Entry point (argparse + config)
+├── run.py                     # Training dispatch (weibo/weibo21 data loading)
+├── mae.py                     # MAE ViT model (Masked Autoencoder)
+├── dataset.py                 # FineFake/GossipCop dataset (category-aware, CSV auto-detect)
+├── feature.py                 # t-SNE feature visualization (graceful fallback)
+├── preproc.py                 # Weibo MAE image preprocessing (9-class dict)
+├── clipprep.py                # Weibo CLIP image preprocessing (9-class dict)
+├── w21prep.py                 # Weibo21 MAE image preprocessing (9-class dict)
+├── w21clip.py                 # Weibo21 CLIP image preprocessing (9-class dict)
+├── split.py                   # Reasoning column split utility
 ├── probe.py                   # Test probe
-├── requirements.txt
+├── requirements.txt           # Dependencies (fixed format)
 └── .gitignore
 ```
 
----
+### Dataset Category Mapping
 
+| Dataset   | Domains | Categories |
+|-----------|---------|------------|
+| **Weibo** | 9 | Economy, Health, Military, Science, Politics, International, Education, Entertainment, Society |
+| **Weibo21** | 9 | Technology, Military, Education, Disaster, Politics, Healthcare, Finance, Entertainment, Society |
+| **FineFake** | configurable | No built-in domain categories (binary classification per subset: gossip/politi) |
+
+> **Note:** DDIN core model (`net.py`) dynamically adapts `num_domains` from `len(category_dict)`. GossipCop model (`gossip.py`) now also uses dynamic `num_domains` via `Trainer` injection.
 ## 🔧 Requirements
 
 | Dependency | Version |
