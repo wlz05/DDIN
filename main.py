@@ -76,7 +76,7 @@ config = {
 }
 # FineFake-specific: override default CSV names if needed
 if args.dataset == 'finefake':
-    config['root_path'] = './FineFake_dataset/'
+    config['root_path'] = './FineFake/'
     config['finefake_train'] = 'gossip_train.csv'
     config['finefake_val'] = 'gossip_test.csv'     # use test as val if no dedicated val
     config['finefake_test'] = 'gossip_test.csv'
