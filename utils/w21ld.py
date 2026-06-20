@@ -16,7 +16,7 @@ from PIL import Image
 
 def read_image():
     image_list = {}
-    file_list = ['data/nonrumor_images/', 'data/rumor_images/']
+    file_list = ['weibo/nonrumor_images/', 'weibo/rumor_images/']
     data_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),

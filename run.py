@@ -32,7 +32,7 @@ class Run():
         self.dataset = config['dataset']
 
         if config['dataset'] == "weibo":
-            self.root_path = './data/'
+            self.root_path = './weibo/'
             self.train_path = self.root_path + 'train_origin.csv'
             self.val_path = self.root_path + 'val_origin.csv'
             self.test_path = self.root_path + 'test_origin.csv'
@@ -73,9 +73,9 @@ class Run():
                                        category_dict=self.category_dict, num_workers=self.num_workers)
 
         if dataset == "weibo":
-            train_loader = loader.load_data(self.train_path, 'data/train_loader.pkl', 'data/train_clip_loader.pkl', True)
-            val_loader = loader.load_data(self.val_path, 'data/val_loader.pkl', 'data/val_clip_loader.pkl', False)
-            test_loader = loader.load_data(self.test_path, 'data/test_loader.pkl', 'data/test_clip_loader.pkl', False)
+            train_loader = loader.load_data(self.train_path, 'weibo/train_loader.pkl', 'weibo/train_clip_loader.pkl', True)
+            val_loader = loader.load_data(self.val_path, 'weibo/val_loader.pkl', 'weibo/val_clip_loader.pkl', False)
+            test_loader = loader.load_data(self.test_path, 'weibo/test_loader.pkl', 'weibo/test_clip_loader.pkl', False)
         elif dataset == "weibo21":
             train_loader = loader.load_data(self.train_path, 'weibo21/train_loader.pkl', 'weibo21/train_clip_loader.pkl', True)
             val_loader = loader.load_data(self.val_path, 'weibo21/val_loader.pkl', 'weibo21/val_clip_loader.pkl', False)

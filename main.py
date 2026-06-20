@@ -16,7 +16,7 @@ parser.add_argument('--max_len', type=int, default=197)
 parser.add_argument('--num_workers', type=int, default=4)
 parser.add_argument('--early_stop', type=int, default=5)  # tolerance of 5 to avoid early interruption
 parser.add_argument('--bert_vocab_file', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt')
-parser.add_argument('--root_path', default='./data/')
+parser.add_argument('--root_path', default='./weibo/')
 parser.add_argument('--bert', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch')
 parser.add_argument('--batchsize', type=int, default=64)
 parser.add_argument('--seed', type=int, default=3074)

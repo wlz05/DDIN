@@ -12,7 +12,7 @@ import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 def read_image():
     image_list = {}
-    file_list = ['data/nonrumor_images/', 'data/rumor_images/']
+    file_list = ['weibo/nonrumor_images/', 'weibo/rumor_images/']
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
     for path in file_list:
@@ -72,7 +72,7 @@ class bert_data():
                 post_id.append(id)
 
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
-        with open('data/train_clip_loader.pkl', 'wb') as file:
+        with open('weibo/train_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_test(self,path,shuffle,text_only = False):
@@ -97,7 +97,7 @@ class bert_data():
                 post_id.append(id)
 
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
-        with open('data/test_clip_loader.pkl', 'wb') as file:
+        with open('weibo/test_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
     def load_data_val(self,path,shuffle,text_only = False):
@@ -122,7 +122,7 @@ class bert_data():
                 post_id.append(id)
 
         ordered_image = torch.tensor([item.cpu().detach().numpy() for item in ordered_image]).squeeze(1)
-        with open('data/val_clip_loader.pkl', 'wb') as file:
+        with open('weibo/val_clip_loader.pkl', 'wb') as file:
             pickle.dump(ordered_image, file)
         return 1
 category_dict = {
