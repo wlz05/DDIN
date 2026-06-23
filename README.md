@@ -3,6 +3,7 @@
 **DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation.
 
 Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo-21, and FineFake.
+Paper Link: 
 
 ---
 
