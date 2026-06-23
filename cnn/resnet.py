@@ -1,7 +1,5 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
-# -*- coding: utf-8 -*-
-# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 import torch
 import torch.nn as nn
