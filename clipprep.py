@@ -1,3 +1,4 @@
+# -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 from torch.utils.data import TensorDataset, DataLoader
