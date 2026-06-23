@@ -4,7 +4,7 @@
 
 Designed for fake news detection on multiple multimodal datasets including Weibo, Weibo-21, and FineFake.
 
-Paper Link:
+Paper Link: 
 
 ---
 
