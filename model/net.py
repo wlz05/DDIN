@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import os
 import tqdm
 import torch
@@ -18,7 +17,6 @@ import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 from copy import deepcopy
 import math
-
 
 class FGM():
     def __init__(self, model, epsilon=0.5):
@@ -41,7 +39,6 @@ class FGM():
                 assert name in self.backup
                 param.data = self.backup[name]
         self.backup = {}
-
 
 class EMA():
     def __init__(self, model, decay=0.999):
@@ -77,7 +74,6 @@ class EMA():
                 param.data = self.backup[name]
         self.backup = {}
 
-
 class WarmupCosineAnnealingLR:
     def __init__(self, optimizer, warmup_epochs, max_epochs, eta_min=0):
         self.optimizer = optimizer
@@ -98,7 +94,6 @@ class WarmupCosineAnnealingLR:
                 progress = (self.current_epoch - self.warmup_epochs) / (self.max_epochs - self.warmup_epochs)
                 lr = self.eta_min + (self.base_lrs[i] - self.eta_min) * 0.5 * (1 + math.cos(math.pi * progress))
                 param_group['lr'] = lr
-
 
 class MultiScaleSemanticProjection(nn.Module):
     Multi-scale semantic projection layer - captures polysemy through
@@ -121,7 +116,6 @@ class MultiScaleSemanticProjection(nn.Module):
         fused = torch.cat(scale_features, dim=-1)
         return self.fusion(fused)
 
-
 class HierarchicalConflictSynergy(nn.Module):
     Hierarchical conflict synergy - enables cross-granularity conflict
     features to communicate with each other through a Transformer block.
@@ -140,7 +134,6 @@ class HierarchicalConflictSynergy(nn.Module):
         conflicts = torch.stack([conflict_ll, conflict_gl, conflict_gg], dim=1)  # [B, 3, D]
         synergized = self.transformer_block(conflicts)  # [B, 3, D]
         return synergized[:, 0], synergized[:, 1], synergized[:, 2]
-
 
 class DomainAdaptiveWeighting(nn.Module):
     Domain-adaptive weighting - dynamically adjusts the importance of
@@ -165,7 +158,6 @@ class DomainAdaptiveWeighting(nn.Module):
                 gates[:, 2:3] * conflict_gg
         )
         return weighted_conflict, gates
-
 
 class DDIN(nn.Module):
     DDIN: Domain-aware Disentangled Interaction Network
@@ -289,7 +281,6 @@ class DDIN(nn.Module):
         return final_pred, fusion_pred, image_pred, text_pred, \
             fused_features, adaptive_conflict, text_global_proj, image_global_proj
 
-
 class AdaptiveContrastiveLoss(nn.Module):
     Adaptive contrastive loss - enhances cross-modal consistency learning.
     Uses log_softmax for numerical stability and excludes self-pairs.
@@ -315,7 +306,6 @@ class AdaptiveContrastiveLoss(nn.Module):
         loss = -(pos_sum / pos_count).mean()
 
         return loss
-
 
 class Trainer():
     def __init__(self, emb_dim, mlp_dims, bert, use_cuda, lr, dropout,

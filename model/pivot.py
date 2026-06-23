@@ -12,20 +12,17 @@ import torch.sparse
 from scipy.sparse import coo
 import time
 
-
 def trans_to_cuda(variable):
     if torch.cuda.is_available():
         return variable.cuda()
     else:
         return variable
 
-
 def trans_to_cpu(variable):
     if torch.cuda.is_available():
         return variable.cpu()
     else:
         return variable
-
 
 class HyperConv(Module):
     def __init__(self, layers, dataset, emb_size, n_node, n_price, img_emb_size, text_emb_size):
@@ -86,7 +83,6 @@ class HyperConv(Module):
         price_embeddings = self.pri_mlp(pri_emb)
         id_embeddings = self.id_mlp(embedding)
 
-
         return id_embeddings, image_embeddings, text_embeddings, price_embeddings
 
 class MultiHeadSelfAttention(torch.nn.Module):
@@ -141,7 +137,6 @@ class MultiHeadSelfAttention(torch.nn.Module):
 
         return outputs
 
-
 class PositionWiseFeedForward(torch.nn.Module):
     def __init__(self, hidden_size, initializer_range=0.02):
         super(PositionWiseFeedForward, self).__init__()
@@ -154,7 +149,6 @@ class PositionWiseFeedForward(torch.nn.Module):
         x = F.relu(self.final1(x))
         x = self.final2(x)
         return x
-
 
 class TransformerLayer(torch.nn.Module):
     def __init__(self, hidden_size, activate="relu", head_num=4, dropout=0, attention_dropout=0,
@@ -209,7 +203,6 @@ class LayerNorm(nn.Module):
         x = (x - u) / torch.sqrt(s + self.variance_epsilon)
         return self.weight * x + self.bias
 
-
 class Beyond(Module):
     def __init__(self, price_list, category_list, n_node, n_price, n_category, lr, layers, feature_num, l2, lam, dataset, num_heads=4, emb_size=100, img_emb_size=100, text_emb_size=100, feature_emb_size=100, batch_size=100, num_negatives=100):
         super(Beyond, self).__init__()
@@ -260,7 +253,6 @@ class Beyond(Module):
         self.price_mean_embedding = nn.Embedding(self.n_price, self.emb_size)
         self.price_cov_embedding = nn.Embedding(self.n_price, self.emb_size)
 
-
         self.star_emb1 = nn.Embedding(self.n_node, self.feature_emb_size)
         self.star_emb2 = nn.Embedding(self.n_node, self.feature_emb_size)
         self.star_emb3 = nn.Embedding(self.n_node, self.feature_emb_size)
@@ -297,7 +289,6 @@ class Beyond(Module):
         text_img_pre_weight = np.array(textImgWeights)
         self.img_text_embedding.weight.data.copy_(torch.from_numpy(text_img_pre_weight))
 
-
         self.pos_embedding = nn.Embedding(2000, self.emb_size)
         self.pos_pri_embedding = nn.Embedding(2000, self.emb_size)
 
@@ -306,13 +297,11 @@ class Beyond(Module):
         self.pri_mlp = nn.Linear(self.emb_size, self.emb_size)
         self.id_mlp = nn.Linear(self.emb_size, self.emb_size)
 
-
         self.active = nn.ReLU()
         self.w_1 = nn.Linear(self.emb_size * 2, self.emb_size)
         self.w_2 = nn.Linear(self.emb_size, 1)
         self.glu1 = nn.Linear(self.emb_size, self.emb_size)
         self.glu2 = nn.Linear(self.emb_size, self.emb_size, bias=False)
-
 
         if self.emb_size % num_heads != 0:
             raise ValueError(
@@ -355,7 +344,6 @@ class Beyond(Module):
         price_cov_embedding = torch.cat([zeros, price_cov_emb], 0)
         category_embedding = torch.cat([zeros, category_emb], 0)
 
-
         get = lambda i: item_embedding[session_item[i]]
         seq_h = torch.cuda.FloatTensor(self.batch_size, list(session_item.shape)[1], self.emb_size).fill_(0)
         for i in torch.arange(session_item.shape[0]):
@@ -391,7 +379,6 @@ class Beyond(Module):
         beta = beta * mask
         interest_pre = torch.sum(beta * seq_h, 1)
 
-
         seq_pri_mean_emb = self.LayerNorm(seq_pri_mean)  + self.LayerNorm(seq_cate)
         seq_pri_mean_emb = self.dropout2(seq_pri_mean_emb)
 
@@ -426,7 +413,6 @@ class Beyond(Module):
         attention_scores = attention_scores + attention_mask
         attention_probs = nn.Softmax(dim=-1)(attention_scores)  # [bs, 8, seqlen, seqlen]
         attention_probs = self.dropout(attention_probs)
-
 
         mean_context_layer = torch.matmul(attention_probs, mean_value_layer)
         cov_context_layer = torch.matmul(attention_probs ** 2, cov_value_layer)
@@ -517,7 +503,6 @@ class Beyond(Module):
         img_loss_two = torch.sum(torch.log10(torch.sum(topk_img_values, 1)))
         img_con_loss = img_loss_two -img_loss_one
 
-
         text_imgtext_mat = torch.matmul(text_emb, text_gen_emb.permute(1, 0))
         text_imgtext_mat = text_imgtext_mat / tau
         text_imgtext_mat = torch.exp(text_imgtext_mat, out=None)
@@ -554,7 +539,6 @@ class Beyond(Module):
         sess_emb_hgnn, sess_price_mean, sess_price_cov, price_item_mean, price_item_cov = self.generate_sess_emb(item_emb_final, price_mean_emb, price_cov_emb, category_emb, session_item, sess_price, sess_category, session_len, reversed_sess_item, mask) #batch session embeddings
 
         return item_emb_final, price_item_mean, price_item_cov, sess_emb_hgnn, sess_price_mean, sess_price_cov, self.lam*con_loss
-
 
 def perform(model, i, data):
     tar, session_len, session_item, reversed_sess_item, mask, price_seqs, category_seqs = data.get_slice(i)  # get one batch of data

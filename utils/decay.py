@@ -1,9 +1,7 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import json
-
 
 def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_decay=.75):
     Parameter groups for layer-wise lr decay
@@ -46,9 +44,7 @@ def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_de
         param_group_names[group_name]["params"].append(n)
         param_groups[group_name]["params"].append(p)
 
-
     return list(param_groups.values())
-
 
 def get_layer_id_for_vit(name, num_layers):
     Assign a parameter with its layer id

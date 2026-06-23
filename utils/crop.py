@@ -1,14 +1,12 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import math
 
 import torch
 
 from torchvision import transforms
 from torchvision.transforms import functional as F
-
 
 class RandomResizedCrop(transforms.RandomResizedCrop):
     RandomResizedCrop for matching TF/TPU implementation: no for-loop is used.

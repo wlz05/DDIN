@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import torch
 import numpy as np
 from sklearn.manifold import TSNE

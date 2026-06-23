@@ -13,7 +13,6 @@ import os
 import numpy as np
 from PIL import Image
 
-
 def read_image():
     image_list = {}
     file_list = ['weibo21/nonrumor_images/', 'weibo21/rumor_images/']
@@ -42,10 +41,8 @@ def read_image():
     print(f"[INFO] Loaded {len(image_list)} images total")
     return image_list
 
-
 def _init_fn(worker_id):
     np.random.seed(2024)
-
 
 def read_pkl(path):
     try:
@@ -57,11 +54,9 @@ def read_pkl(path):
     except (pickle.UnpicklingError, EOFError) as e:
         raise ValueError(f"[ERROR] Corrupted pickle file: {path}, error: {e}")
 
-
 def df_filter(df_data):
     df_data = df_data[df_data['category'] != 'cannot determine']
     return df_data
-
 
 def word2input(texts, vocab_file, max_len):
     BERT tokenization with automatic fallback for missing/invalid text.
@@ -106,7 +101,6 @@ def word2input(texts, vocab_file, max_len):
     for i, token in enumerate(token_ids):
         masks[i] = (token != 0)
     return token_ids, masks
-
 
 class bert_data():
     def __init__(self, max_len, batch_size, vocab_file, category_dict, num_workers=2):

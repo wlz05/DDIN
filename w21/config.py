@@ -27,7 +27,6 @@ weibo_real_root = './data/nonrumor_images/'
 weibo21_fake_root = './weibo21/rumor_images/'
 weibo21_real_root = './weibo21/nonrumor_images/'
 
-
 mixset_xlsx = "./dataset/rumor_dataset/all_images.xlsx"
 
 def get_workbook(xlsx):
@@ -36,7 +35,6 @@ def get_workbook(xlsx):
     sheet = wb[sheetnames[0]]
     rows = sheet.max_row
     return sheet, rows
-
 
 def strQ2B(ustring):
     rstring = ""

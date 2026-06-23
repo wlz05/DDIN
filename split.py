@@ -4,7 +4,6 @@
 import pandas as pd
 import re
 
-
 def process_reasoning_data(input_file, output_file):
     df = pd.read_csv(input_file)
 
@@ -37,7 +36,6 @@ def process_reasoning_data(input_file, output_file):
 
     df.to_csv(output_file, index=False)
     print(f"Processing complete. Saved to {output_file}")
-
 
 if __name__ == "__main__":
     input_csv = "./weibo_with_reasoning.csv"

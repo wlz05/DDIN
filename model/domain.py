@@ -21,7 +21,6 @@ from utils.utils import (
 
 logger = logging.getLogger(__name__)
 
-
 class AdaIN(nn.Module):
     def __init__(self):
         super().__init__()
@@ -59,7 +58,6 @@ class AdaIN(nn.Module):
         if sigma.dim() == 2 and x_norm.dim() == 3: sigma = sigma.unsqueeze(1)
         sigma = torch.relu(sigma) + 1e-8
         return sigma * x_norm + mu
-
 
 try:
     import mae
@@ -156,7 +154,6 @@ except ImportError:
     if 'cnn_extractor' not in globals():
         HAS_CUSTOM_LAYERS = False
 
-
         class cnn_extractor(nn.Module):
             def __init__(self, in_dim_token_vector, feature_kernel_config, out_features=320):
                 super().__init__()
@@ -251,7 +248,6 @@ try:
     import cn_clip.clip as cn_clip_lib
 except ImportError:
     cn_clip_lib = None
-
 
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, bert_path, clip_path, mae_checkpoint_path,
@@ -653,7 +649,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         final_logits = self.max_classifier(all_modality_combined).squeeze(-1)
 
         return final_logits, text_logits, image_logits, fusion_logits
-
 
 class Trainer():
     def __init__(self,
