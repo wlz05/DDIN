@@ -2,7 +2,6 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
 import json
-import wget
 import os
 import pandas as pd
 import requests
@@ -11,15 +10,31 @@ json_files = ['fake_release_all.json','real_release_all.json']
 folders = ['rumor_images','nonrumor_images']
 conduct_download = True
 def download_image(url, folder):
-    response = requests.get(url,verify=False)
-    if response.status_code == 200:
-        filename = url.split("/")[-1]
-        filepath = os.path.join(folder, filename)
-        with open(filepath, "wb") as file:
-            file.write(response.content)
-        print(f"Saved image: {filename}")
-    else:
-        print("Failed to download image, HTTP error:", response.status_code)
+    try:
+        response = requests.get(url, verify=False, timeout=30)
+        if response.status_code == 200:
+            filename = url.split("/")[-1]
+            filepath = os.path.join(folder, filename)
+            try:
+                with open(filepath, "wb") as file:
+                    file.write(response.content)
+                print(f"Saved image: {filename}")
+                return True
+            except Exception as e:
+                print(f"Failed to write image: {filename}, error: {e}")
+                return False
+        else:
+            print(f"Failed to download image, HTTP {response.status_code}: {url}")
+            return False
+    except requests.exceptions.Timeout:
+        print(f"Timeout downloading image: {url}")
+        return False
+    except requests.exceptions.ConnectionError:
+        print(f"Connection error downloading image: {url}")
+        return False
+    except Exception as e:
+        print(f"Failed to download image: {url}, error: {e}")
+        return False
 
 for i in range(2):
     json_file = json_files[i]
@@ -44,9 +59,11 @@ for i in range(2):
                 if short_name not in images_set:
                     if conduct_download:
                         print(full_image_name, folder + short_name)
-                        download_image(full_image_name, folder)
-                        image_name = image_name + "rumor_images/" + short_name + "|"
-                        print("Download ok. {}".format(full_image_name))
+                        if download_image(full_image_name, folder):
+                            image_name = image_name + "rumor_images/" + short_name + "|"
+                            print("Download ok. {}".format(full_image_name))
+                        else:
+                            print("Download failed, skipped. {}".format(full_image_name))
                     else:
                         print("Do not download. {}".format(full_image_name))
                 else:
