@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,6 @@ try:
 except ImportError:
     logger.warning("Failed to import .layers or .pivot. Using placeholder definitions if needed.")
 
-
     class MaskAttention(nn.Module):
         def __init__(self, dim):
             super().__init__(); self.dim = dim
@@ -62,7 +60,6 @@ except ImportError:
             sum_mask = torch.sum(mask, dim=1)
             return sum_masked_feat / (sum_mask + 1e-9)
 
-
     class TokenAttention(nn.Module):
         def __init__(self, dim):
             super().__init__();
@@ -78,7 +75,6 @@ except ImportError:
             alpha = torch.softmax(e, dim=1);
             context = torch.bmm(alpha.transpose(1, 2), feat).squeeze(1);
             return context, alpha
-
 
     class MLP_fusion(nn.Module):
         def __init__(self, in_dim, out_dim, hidden_dims_list, dropout_rate):
@@ -96,7 +92,6 @@ except ImportError:
         def forward(self, x):
             return self.network(x)
 
-
     class MLP(nn.Module):
         def __init__(self, in_dim, hidden_dims_list, dropout_rate):
             super().__init__();
@@ -112,7 +107,6 @@ except ImportError:
 
         def forward(self, x):
             return self.network(x)
-
 
     class cnn_extractor(nn.Module):  # placeholder cnn_extractor
         def __init__(self, in_dim_seq, feature_kernel_unused, out_dim=320):
@@ -145,18 +139,15 @@ except ImportError:
                 return torch.zeros(output.shape[0], self.out_dim, device=output.device)
             return output
 
-
     class LayerNorm(nn.Module):
         def __init__(self, dim, eps=1e-12): super().__init__(); self.norm = nn.LayerNorm(dim, eps=eps)
 
         def forward(self, x): return self.norm(x) if x is not None else None
 
-
     class TransformerLayer(nn.Module):
         def __init__(self, *args, **kwargs): super().__init__(); self.fc = nn.Identity()
 
         def forward(self, x, mask=None): return self.fc(x)
-
 
     class MLP_trans(nn.Module):
         def __init__(self, *args, **kwargs): super().__init__(); self.fc = nn.Identity()
@@ -165,12 +156,10 @@ except ImportError:
 
 from timm.models.vision_transformer import Block
 
-
 class SimpleGate(nn.Module):
     def __init__(self, dim=1): super(SimpleGate, self).__init__(); self.dim = dim
 
     def forward(self, x): x1, x2 = x.chunk(2, dim=self.dim); return x1 * x2
-
 
 class AdaIN(nn.Module):
     def __init__(self):
@@ -209,7 +198,6 @@ class AdaIN(nn.Module):
         if sigma.dim() == 2 and x_norm.dim() == 3: sigma = sigma.unsqueeze(1)
         sigma = torch.relu(sigma) + 1e-8
         return sigma * x_norm + mu
-
 
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims,
@@ -448,7 +436,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         final_logits = self.max_classifier(all_modality).squeeze(-1)
         return final_logits, text_logits, image_logits, fusion_logits
 
-
 class Trainer():
     def __init__(self, emb_dim, mlp_dims,
                  bert_path_or_name, clip_path_or_name,
@@ -656,7 +643,6 @@ class Trainer():
                         category_list.extend(batch_category.cpu().numpy().tolist())
                     else:  # If category missing but calculate_metrics needs it, fill placeholder
                         category_list.extend([None] * batch_label.size(0))
-
 
                 except Exception as e:
                     logger.exception(f"Test batch {step_n} error: {e}")

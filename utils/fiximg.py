@@ -20,7 +20,6 @@ data_transforms = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-
 def process_split(split):
     pkl_path = root + f'{split}.pkl'
     if not os.path.exists(pkl_path):
@@ -66,7 +65,6 @@ def process_split(split):
         print(f"[INFO] Saved {split} tensor ({final_tensor.shape}) to {output_path}")
     except Exception as e:
         raise IOError(f"[ERROR] Failed to save {output_path}: {e}")
-
 
 if __name__ == '__main__':
     for split_name in ['train', 'val', 'test']:

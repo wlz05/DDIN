@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import os
 import PIL
 
@@ -9,7 +8,6 @@ from torchvision import datasets, transforms
 
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-
 
 def build_dataset(is_train, args):
     transform = build_transform(is_train, args)
@@ -20,7 +18,6 @@ def build_dataset(is_train, args):
     print(dataset)
 
     return dataset
-
 
 def build_transform(is_train, args):
     mean = IMAGENET_DEFAULT_MEAN

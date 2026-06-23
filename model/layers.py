@@ -9,7 +9,6 @@ import math
 import torch.nn as nn
 from torch.autograd import Function
 
-
 class EmbeddingLayer(torch.nn.Module):
     def __init__(self, field_dims, embed_dim):
         super().__init__()
@@ -20,7 +19,6 @@ class EmbeddingLayer(torch.nn.Module):
     def forward(self, x):
         x = x + x.new_tensor(self.offsets).unsqueeze(0)
         return self.embedding(x)
-
 
 class MultiLayerPerceptron(torch.nn.Module):
     def __init__(self, input_dim, embed_dims, dropout, output_layer=True):
@@ -39,7 +37,6 @@ class MultiLayerPerceptron(torch.nn.Module):
     def forward(self, x):
         return self.mlp(x)
 
-
 class MLP(torch.nn.Module):
     def __init__(self, input_dim, embed_dims, dropout):
         super(MLP, self).__init__()
@@ -55,7 +52,6 @@ class MLP(torch.nn.Module):
 
     def forward(self, x):
         return self.mlp(x)
-
 
 class MLP_Mu(torch.nn.Module):
     def __init__(self, input_dim, embed_dims, dropout):
@@ -73,7 +69,6 @@ class MLP_Mu(torch.nn.Module):
     def forward(self, x):
         return self.mlp(x)
 
-
 class MLP_fusion(torch.nn.Module):
     def __init__(self, input_dim, out_dim, embed_dims, dropout):
         super(MLP_fusion, self).__init__()
@@ -89,7 +84,6 @@ class MLP_fusion(torch.nn.Module):
 
     def forward(self, x):
         return self.mlp(x)
-
 
 class clip_fuion(torch.nn.Module):
     def __init__(self, input_dim, out_dim, embed_dims, dropout):
@@ -107,7 +101,6 @@ class clip_fuion(torch.nn.Module):
     def forward(self, x):
         return self.mlp(x)
 
-
 class cnn_extractor(torch.nn.Module):
     def __init__(self, input_size, feature_kernel):
         super(cnn_extractor, self).__init__()
@@ -122,7 +115,6 @@ class cnn_extractor(torch.nn.Module):
         feature = torch.cat(feature, dim=1)
         feature = feature.view([-1, feature.shape[1]])
         return feature
-
 
 class image_cnn_extractor(nn.Module):
     def __init__(self):
@@ -147,7 +139,6 @@ class image_cnn_extractor(nn.Module):
         x = self.fc2(x)
         return x
 
-
 class image_extractor(torch.nn.Module):
     def __init__(self, out_channels):
         super(image_extractor, self).__init__()
@@ -169,7 +160,6 @@ class image_extractor(torch.nn.Module):
         img_out = F.normalize(img_out, p=2, dim=-1)
         return img_out
 
-
 class classifier(torch.nn.Module):
     def __init__(self, out_dim=1):
         super(classifier, self).__init__()
@@ -183,7 +173,6 @@ class classifier(torch.nn.Module):
         x = self.classifier1(self.trim(x))
         return x
 
-
 class MaskAttention(torch.nn.Module):
     def __init__(self, input_dim):
         super(MaskAttention, self).__init__()
@@ -196,7 +185,6 @@ class MaskAttention(torch.nn.Module):
         score = torch.softmax(score, dim=-1).unsqueeze(1)
         output = torch.matmul(score, input).squeeze(1)
         return output
-
 
 class TokenAttention(torch.nn.Module):
     def __init__(self, input_shape):
@@ -213,7 +201,6 @@ class TokenAttention(torch.nn.Module):
         outputs = torch.matmul(scores, inputs).squeeze(1)
         return outputs, scores
 
-
 class Attention(torch.nn.Module):
     def forward(self, query, key, value, mask=None, dropout=None):
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(query.size(-1))
@@ -223,7 +210,6 @@ class Attention(torch.nn.Module):
         if dropout is not None:
             p_attn = dropout(p_attn)
         return torch.matmul(p_attn, value), p_attn
-
 
 class MultiHeadedAttention(torch.nn.Module):
     def __init__(self, h, d_model, dropout=0.1):
@@ -246,7 +232,6 @@ class MultiHeadedAttention(torch.nn.Module):
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
         return self.output_linear(x), attn
 
-
 class ReverseLayerF(Function):
     @staticmethod
     def forward(ctx, input_, alpha):
@@ -257,7 +242,6 @@ class ReverseLayerF(Function):
     def backward(ctx, grad_output):
         output = grad_output.neg() * ctx.alpha
         return output, None
-
 
 class MultiScaleProjectionLayer(nn.Module):
     def __init__(self, in_dim, out_dim, num_scales=3):
@@ -274,7 +258,6 @@ class MultiScaleProjectionLayer(nn.Module):
         concat = torch.cat(parts, dim=-1)
         return self.fuse(concat)
 
-
 class GlobalGlobalInconsistency(nn.Module):
     def __init__(self, dim):
         super(GlobalGlobalInconsistency, self).__init__()
@@ -289,7 +272,6 @@ class GlobalGlobalInconsistency(nn.Module):
         diff = f_t_glo - f_i_glo
         fused = torch.cat([f_t_glo, f_i_glo, diff], dim=-1)
         return self.mlp(fused)
-
 
 class LocalLocalInconsistency(nn.Module):
 
@@ -335,7 +317,6 @@ class LocalLocalInconsistency(nn.Module):
         conflict = torch.cat([t_conflict, i_conflict], dim=-1)
         return self.conflict_aggregator(conflict)
 
-
 class GlobalLocalInconsistency(nn.Module):
 
     def __init__(self, dim):
@@ -360,7 +341,6 @@ class GlobalLocalInconsistency(nn.Module):
 
         return self.fc(fused)
 
-
 class HierarchicalConflictSynergy(nn.Module):
     def __init__(self, dim, num_layers=1):
         super(HierarchicalConflictSynergy, self).__init__()
@@ -371,7 +351,6 @@ class HierarchicalConflictSynergy(nn.Module):
         x = torch.stack([C_LL, C_GL, C_GG], dim=1)
         out = self.transformer(x)
         return out
-
 
 class DomainAwareGating(nn.Module):
     def __init__(self, dim):
@@ -385,7 +364,6 @@ class DomainAwareGating(nn.Module):
     def forward(self, domain_emb):
         logits = self.mlp(domain_emb)
         return torch.softmax(logits, dim=-1)
-
 
 class SupervisedContrastiveLoss(nn.Module):
     Supervised Contrastive Learning Loss
@@ -428,7 +406,6 @@ class SupervisedContrastiveLoss(nn.Module):
 
         loss = -mean_log_prob_pos.mean()
         return loss
-
 
 class FocalLoss(nn.Module):
     Focal Loss for addressing class imbalance and focusing on hard examples

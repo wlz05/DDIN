@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import os
 import tqdm
 import torch
@@ -11,7 +10,6 @@ from transformers import BertModel
 import mae
 import torch.nn.functional as F
 import torch.nn as nn
-
 
 class BinaryFocalLoss(nn.Module):
     def __init__(self, gamma=2.0, alpha=0.75, reduction='mean'):
@@ -29,7 +27,6 @@ class BinaryFocalLoss(nn.Module):
             return focal_loss.mean()
         return focal_loss.sum()
 
-
 from utils.utils_weibo import clipdata2gpu, Averager, metricsTrueFalse, Recorder
 from .layers import MLP, MaskAttention, TokenAttention, cnn_extractor, MLP_fusion, clip_fuion
 from timm.models.vision_transformer import Block
@@ -41,7 +38,6 @@ except ImportError:
     print("Warning: cn_clip library not found. CLIP functionalities will not work.")
     clip = None
     load_from_name = None
-
 
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, bert, out_channels, dropout,
@@ -238,7 +234,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                 F_text, F_image, F_cross,
                 P_delta_text, P_delta_image, P_delta_cross,
                 manipulation_pred_logits)
-
 
 class Trainer():
     def __init__(self, emb_dim, mlp_dims, bert, use_cuda, lr, dropout,

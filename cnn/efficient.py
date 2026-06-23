@@ -108,7 +108,6 @@ class InvertedResidualBlock(nn.Module):
         else:
             return self.conv(x)
 
-
 class EfficientNet(nn.Module):
     def __init__(self, version, num_classes):
         super(EfficientNet, self).__init__()
@@ -162,7 +161,6 @@ class EfficientNet(nn.Module):
     def get_features(self,x):
         feature = self.features(x).permute(0,2,3,1)
         return feature.reshape(feature.shape[0],feature.shape[1]*feature.shape[2],-1)
-
 
 def test():
     device = "cuda" if torch.cuda.is_available() else "cpu"

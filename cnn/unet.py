@@ -22,14 +22,12 @@ from .nn import (
     checkpoint,
 )
 
-
 class TimestepBlock(nn.Module):
     Any module where forward() takes timestep embeddings as a second argument.
 
     @abstractmethod
     def forward(self, x, emb):
         Apply the module to `x` given `emb` timestep embeddings.
-
 
 class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
     A sequential module that passes timestep embeddings to the children that
@@ -42,7 +40,6 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
             else:
                 x = layer(x)
         return x
-
 
 class Upsample(nn.Module):
     An upsampling layer with an optional convolution.
@@ -72,7 +69,6 @@ class Upsample(nn.Module):
             x = self.conv(x)
         return x
 
-
 class Downsample(nn.Module):
     A downsampling layer with an optional convolution.
 
@@ -95,7 +91,6 @@ class Downsample(nn.Module):
     def forward(self, x):
         assert x.shape[1] == self.channels
         return self.op(x)
-
 
 class ResBlock(TimestepBlock):
     A residual block that can optionally change the number of channels.
@@ -185,7 +180,6 @@ class ResBlock(TimestepBlock):
             h = self.out_layers(h)
         return self.skip_connection(x) + h
 
-
 class AttentionBlock(nn.Module):
     An attention block that allows spatial positions to attend to each other.
 
@@ -215,7 +209,6 @@ class AttentionBlock(nn.Module):
         h = h.reshape(b, -1, h.shape[-1])
         h = self.proj_out(h)
         return (x + h).reshape(b, c, *spatial)
-
 
 class QKVAttention(nn.Module):
     A module which performs QKV attention.
@@ -251,7 +244,6 @@ class QKVAttention(nn.Module):
         num_spatial = int(np.prod(spatial))
         matmul_ops = 2 * b * (num_spatial ** 2) * c
         model.total_ops += th.DoubleTensor([matmul_ops])
-
 
 class UNetModel(nn.Module):
     The full UNet model with attention and timestep embedding.
@@ -489,10 +481,8 @@ class UNetModel(nn.Module):
             result["up"].append(h.type(x.dtype))
         return result
 
-
 class SuperResModel(UNetModel):
     A UNetModel that performs super-resolution.
-
 
     def __init__(self, in_channels, *args, **kwargs):
         super().__init__(in_channels * 2, *args, **kwargs)
