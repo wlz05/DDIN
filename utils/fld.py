@@ -47,7 +47,6 @@ def word2input(texts, vocab_file, max_len):
     masks = (token_ids != 0).long()
     return token_ids, masks
 
-
 class bert_data():
     def __init__(self, max_len, batch_size, vocab_file, category_dict, num_workers=2):
         self.max_len = max_len

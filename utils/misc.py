@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import builtins
 import datetime
 import os
@@ -12,7 +11,6 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 from torch._six import inf
-
 
 class SmoothedValue(object):
     window or the global series average.
@@ -70,7 +68,6 @@ class SmoothedValue(object):
             global_avg=self.global_avg,
             max=self.max,
             value=self.value)
-
 
 class MetricLogger(object):
     def __init__(self, delimiter="\t"):
@@ -155,7 +152,6 @@ class MetricLogger(object):
         print('{} Total time: {} ({:.4f} s / it)'.format(
             header, total_time_str, total_time / len(iterable)))
 
-
 def setup_for_distributed(is_master):
     This function disables printing when not in master process
     builtin_print = builtins.print
@@ -170,7 +166,6 @@ def setup_for_distributed(is_master):
 
     builtins.print = print
 
-
 def is_dist_avail_and_initialized():
     if not dist.is_available():
         return False
@@ -178,27 +173,22 @@ def is_dist_avail_and_initialized():
         return False
     return True
 
-
 def get_world_size():
     if not is_dist_avail_and_initialized():
         return 1
     return dist.get_world_size()
-
 
 def get_rank():
     if not is_dist_avail_and_initialized():
         return 0
     return dist.get_rank()
 
-
 def is_main_process():
     return get_rank() == 0
-
 
 def save_on_master(*args, **kwargs):
     if is_main_process():
         torch.save(*args, **kwargs)
-
 
 def init_distributed_mode(args):
     if args.dist_on_itp:
@@ -233,7 +223,6 @@ def init_distributed_mode(args):
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
 
-
 class NativeScalerWithGradNormCount:
     state_dict_key = "amp_scaler"
 
@@ -262,7 +251,6 @@ class NativeScalerWithGradNormCount:
     def load_state_dict(self, state_dict):
         self._scaler.load_state_dict(state_dict)
 
-
 def get_grad_norm_(parameters, norm_type: float = 2.0) -> torch.Tensor:
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
@@ -276,7 +264,6 @@ def get_grad_norm_(parameters, norm_type: float = 2.0) -> torch.Tensor:
     else:
         total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
     return total_norm
-
 
 def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler):
     output_dir = Path(args.output_dir)
@@ -313,7 +300,6 @@ def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None):
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
-
 
 def all_reduce_mean(x):
     world_size = get_world_size()

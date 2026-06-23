@@ -9,7 +9,6 @@ from sklearn.model_selection import train_test_split
 
 root = './FineFake/'
 
-
 def safe_load_pickle(filepath, name="pickle"):
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"[ERROR] {name} not found: {filepath}")
@@ -17,7 +16,6 @@ def safe_load_pickle(filepath, name="pickle"):
         return pd.read_pickle(filepath) if filepath.endswith('.pkl') else pickle.load(open(filepath, 'rb'))
     except Exception as e:
         raise ValueError(f"[ERROR] Failed to load {name} from {filepath}: {e}")
-
 
 def safe_save_pickle(data, filepath, name="pickle"):
     os.makedirs(os.path.dirname(filepath) or '.', exist_ok=True)
@@ -29,7 +27,6 @@ def safe_save_pickle(data, filepath, name="pickle"):
                 pickle.dump(data, f)
     except Exception as e:
         raise IOError(f"[ERROR] Failed to save {name} to {filepath}: {e}")
-
 
 print("[INFO] Loading FineFake data...")
 df = safe_load_pickle(root + 'FineFake.pkl', 'FineFake metadata')
@@ -48,7 +45,6 @@ safe_save_pickle(df.iloc[train_idx], root + 'train.pkl', 'train metadata')
 safe_save_pickle(df.iloc[val_idx], root + 'val.pkl', 'val metadata')
 safe_save_pickle(df.iloc[test_idx], root + 'test.pkl', 'test metadata')
 
-
 def save_feat(idx, prefix):
     feat = full_features[idx]
     feat_path = root + f'{prefix}_loader.pkl'
@@ -56,7 +52,6 @@ def save_feat(idx, prefix):
     safe_save_pickle(feat, feat_path, f'{prefix} features')
     safe_save_pickle(feat, clip_path, f'{prefix} CLIP features')
     print(f"[INFO] Saved {len(idx)} samples to {feat_path}")
-
 
 save_feat(train_idx, 'f_train')
 save_feat(val_idx, 'f_val')

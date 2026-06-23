@@ -1,8 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
-
 import torch
 import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
 
@@ -54,7 +52,6 @@ VGG_types = {
     ],
 }
 
-
 class VGG_net(nn.Module):
     def __init__(self, in_channels=3, num_classes=1000):
         super(VGG_net, self).__init__()
@@ -101,7 +98,6 @@ class VGG_net(nn.Module):
                 layers += [nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))]
 
         return nn.Sequential(*layers)
-
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"

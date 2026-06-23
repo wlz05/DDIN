@@ -1,7 +1,6 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 from functools import partial
 
 import torch
@@ -186,9 +185,7 @@ class MaskedAutoencoderViT(nn.Module):
             x = blk(x)
         latent = self.norm(x)
 
-
         return latent
-
 
 def mae_vit_base_patch16_dec512d8b(**kwargs):
     model = MaskedAutoencoderViT(
@@ -197,7 +194,6 @@ def mae_vit_base_patch16_dec512d8b(**kwargs):
         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-
 def mae_vit_large_patch16_dec512d8b(**kwargs):
     model = MaskedAutoencoderViT(
         patch_size=16, embed_dim=1024, depth=24, num_heads=16,
@@ -205,14 +201,12 @@ def mae_vit_large_patch16_dec512d8b(**kwargs):
         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-
 def mae_vit_huge_patch14_dec512d8b(**kwargs):
     model = MaskedAutoencoderViT(
         patch_size=14, embed_dim=1280, depth=32, num_heads=16,
         decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
-
 
 mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # decoder: 512 dim, 8 blocks

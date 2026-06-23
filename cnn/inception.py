@@ -20,7 +20,6 @@ class GoogLeNet(nn.Module):
             self.bayar_final = (torch.tensor(np.zeros((5, 5)))).cuda()
             self.bayar_final[2, 2] = -1
 
-
         self.conv1 = conv_block(
             in_channels=image_channels,
             out_channels=64,
@@ -104,7 +103,6 @@ class GoogLeNet(nn.Module):
         else:
             return x
 
-
 class Inception_block(nn.Module):
     def __init__(
         self, in_channels, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, out_1x1pool
@@ -131,7 +129,6 @@ class Inception_block(nn.Module):
         return torch.cat(
             [self.branch1(x), self.branch2(x), self.branch3(x), self.branch4(x)], 1
         )
-
 
 class InceptionAux(nn.Module):
     def __init__(self, in_channels, num_classes):
@@ -162,7 +159,6 @@ class SimpleGate(nn.Module):
         x1,x2 = x.chunk(2,dim=self.dim)
         return x1*x2
 
-
 class conv_block(nn.Module):
     def __init__(self, in_channels, out_channels, xbn=False, **kwargs):
         super(conv_block, self).__init__()
@@ -175,7 +171,6 @@ class conv_block(nn.Module):
         x = self.relu(x)
         x = self.batchnorm(x)
         return x
-
 
 if __name__ == "__main__":
     x = torch.randn(3, 3, 224, 224)

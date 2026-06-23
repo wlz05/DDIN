@@ -45,7 +45,6 @@ class AdaIN(nn.Module):
         x_norm = x_reduce_mean/x_std
         return (sigma.squeeze(1)*(x_norm + mu.squeeze(1))).permute([1,0])
 
-
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, bert, out_channels, dropout):
         super(MultiDomainPLEFENDModel, self).__init__()
@@ -214,7 +213,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.MLP_fusion0 = MLP_fusion(768 * 2, 768, [348], 0.1)
         self.clip_fusion = clip_fuion(1024, 320, [348], 0.1)
 
-
         self.model_size = "base"
         self.image_model = mae.__dict__["mae_vit_{}_patch16".format(self.model_size)](norm_pix_loss=False)
         self.image_model.cuda()
@@ -286,7 +284,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         clip_fusion_feature = torch.cat((clip_image_feature, clip_text_feature),dim=-1)#torch.Size([64, 1024])
         clip_fusion_feature = self.clip_fusion(clip_fusion_feature.float())#torch.Size([64, 320])
 
-
         text_atn_feature = self.text_attention(text_feature,masks)
         image_atn_feature, _ = self.image_attention(image_feature)
         fusion_feature = torch.cat((image_feature, text_feature), dim=-1)
@@ -316,7 +313,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             gate_out = self.fusion_gate_list[i](fusion_gate_input)
             fusion_gate_out_list.append(gate_out)
         self.fusion_gate_out_list = fusion_gate_out_list
-
 
         text_gate_expert_value = []
         text_gate_spacial_expert_value = []
@@ -379,7 +375,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                 share_gate_expert0 += (
                         fusion_tmp_expert0 * self.fusion_gate_out_list0[m][:, (self.num_expert + n)].unsqueeze(1))
             fusion_gate_expert_value0.append(share_gate_expert0)
-
 
         text_only_output = []
         text_label_pred = []
@@ -500,9 +495,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         final_label_pred_list = torch.cat((final_label_pred_list[0], final_label_pred_list[1], final_label_pred_list[2], final_label_pred_list[3],
                                      final_label_pred_list[4], final_label_pred_list[5], final_label_pred_list[6], final_label_pred_list[7]))
 
-
         return final_label_pred_list,fusion_label_pred_list,image_label_pred_list,text_label_pred_list
-
 
 class Trainer():
     def __init__(self,
@@ -614,7 +607,6 @@ class Trainer():
                 batch_label_pred1 = fusion_label_pred_list
                 batch_label_pred2 = image_label_pred_list
                 batch_label_pred3 = text_label_pred_list
-
 
                 batch_label = torch.cat((label[idxs.squeeze() == 0], label[idxs.squeeze() == 1],
                                          label[idxs.squeeze() == 2], label[idxs.squeeze() == 3],

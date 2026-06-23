@@ -4,7 +4,6 @@
 import torch
 import torch.nn as nn
 
-
 class block(nn.Module):
     def __init__(
         self, in_channels, intermediate_channels, identity_downsample=None, stride=1
@@ -144,23 +143,18 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-
 def ResNet50(img_channel=3, num_classes=1000, use_SRM=False):
     return ResNet(block, [3, 4, 6, 3], img_channel, num_classes, use_SRM)
-
 
 def ResNet101(img_channel=3, num_classes=1000):
     return ResNet(block, [3, 4, 23, 3], img_channel, num_classes)
 
-
 def ResNet152(img_channel=3, num_classes=1000):
     return ResNet(block, [3, 8, 36, 3], img_channel, num_classes)
-
 
 def test():
     net = ResNet101(img_channel=3, num_classes=1000)
     y = net(torch.randn(4, 3, 224, 224)).to("cuda")
     print(y.size())
-
 
 test()

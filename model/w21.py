@@ -16,7 +16,6 @@ from timm.models.vision_transformer import Block
 import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 
-
 class SimpleGate(nn.Module):
     def __init__(self, dim=1):
         super(SimpleGate, self).__init__()
@@ -25,7 +24,6 @@ class SimpleGate(nn.Module):
     def forward(self, x):
         x1, x2 = x.chunk(2, dim=self.dim)
         return x1 * x2
-
 
 class AdaIN(nn.Module):
     def __init__(self):
@@ -51,11 +49,9 @@ class AdaIN(nn.Module):
         x_norm = x_reduce_mean / x_std
         return (sigma.squeeze(1) * (x_norm + mu.squeeze(1))).permute([1, 0])
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 class TripleModalFusionNetwork(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -95,7 +91,6 @@ class TripleModalFusionNetwork(nn.Module):
         fused_feature = self.fusion_layer(fused_feature)  # [batch_size, 320]
 
         return fused_feature
-
 
 class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, bert, out_channels, dropout):
@@ -569,7 +564,6 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         fake_news_sigmoid = torch.sigmoid(self.max_classifier(all_modility).squeeze(1))
 
         return fake_news_sigmoid, text_fake_news, image_fake_news, fusion_fake_news
-
 
 class Trainer():
     def __init__(self,

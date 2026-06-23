@@ -1,12 +1,8 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
-
-
 import torch
 import torch.nn as nn  # All neural network modules, nn.Linear, nn.Conv2d, BatchNorm, Loss functions
-
 
 class LeNet(nn.Module):
     def __init__(self):
@@ -50,12 +46,10 @@ class LeNet(nn.Module):
         x = self.linear2(x)
         return x
 
-
 def test_lenet():
     x = torch.randn(64, 1, 32, 32)
     model = LeNet()
     return model(x)
-
 
 if __name__ == "__main__":
     out = test_lenet()

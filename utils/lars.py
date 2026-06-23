@@ -1,9 +1,7 @@
 # -*-codeing = utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-
 import torch
-
 
 class LARS(torch.optim.Optimizer):
     LARS optimizer, no rate scaling or weight decay for parameters <= 1D.

@@ -13,7 +13,6 @@ from transformers import RobertaModel
 from utils.utils import data2gpu, Averager, metrics, Recorder
 import logging
 
-
 class BertFNModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, dropout, dataset):
         super(BertFNModel, self).__init__()
@@ -28,7 +27,6 @@ class BertFNModel(torch.nn.Module):
         bert_feature, _ = self.attention(bert_feature, masks)
         output = self.mlp(bert_feature)
         return torch.sigmoid(output.squeeze(1))
-
 
 class Trainer():
     def __init__(self,
