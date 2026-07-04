@@ -343,3 +343,4 @@ class Trainer():
                     all_categories.extend(batch_data['category'].cpu().numpy())
 
         return metricsTrueFalse(all_labels, all_preds, all_categories, self.category_dict)
+# Author: 
