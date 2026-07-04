@@ -618,4 +618,5 @@ def train_test(model, train_data, test_data):
                     metrics['mrr%d' % K].append(1 / (np.where(prediction == target)[0][0] + 1))
                     metrics['ndcg%d' % K].append(1 / (np.log2(np.where(prediction == target)[0][0] + 2)))
     return metrics, total_loss
+
 # Author: 

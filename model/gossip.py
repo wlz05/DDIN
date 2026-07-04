@@ -667,4 +667,5 @@ class Trainer():
             logger.exception(f"Metrics calculation error: {e}");
             metric_res = {}
         return metric_res
+
 # Author: 

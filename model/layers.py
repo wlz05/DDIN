@@ -435,4 +435,5 @@ class FocalLoss(nn.Module):
         focal_loss = alpha_t * focal_weight * bce_loss
 
         return focal_loss.mean()
+
 # Author: 

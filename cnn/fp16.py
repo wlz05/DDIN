@@ -51,4 +51,5 @@ def zero_grad(model_params):
         if param.grad is not None:
             param.grad.detach_()
             param.grad.zero_()
+
 # Author: 

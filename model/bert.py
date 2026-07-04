@@ -134,4 +134,5 @@ class Trainer():
                 category.extend(batch_category.detach().cpu().numpy().tolist())
 
         return metrics(label, pred, category, self.category_dict)
+
 # Author: 
