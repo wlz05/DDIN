@@ -57,3 +57,4 @@ def get_layer_id_for_vit(name, num_layers):
         return int(name.split('.')[1]) + 1
     else:
         return num_layers
+# Author: 

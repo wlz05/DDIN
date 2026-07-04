@@ -114,3 +114,4 @@ text_emb = torch.rand(64,320)
 fusion_emb = torch.rand(64,320)
 model = model()
 model(image_emb,text_emb,fusion_emb)
+# Author: 

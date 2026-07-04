@@ -498,3 +498,4 @@ class Trainer():
             metrics(label, pred1, category, self.category_dict), \
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
+# Author: 

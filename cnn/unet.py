@@ -498,3 +498,4 @@ class SuperResModel(UNetModel):
         upsampled = F.interpolate(low_res, (new_height, new_width), mode="bilinear")
         x = th.cat([x, upsampled], dim=1)
         return super().get_feature_vectors(x, timesteps, **kwargs)
+# Author: 

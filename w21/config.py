@@ -55,3 +55,4 @@ def del_emoji(ustring):
         if inside_code <= 66812:
             rstring += chr(inside_code)
     return rstring
+# Author: 
