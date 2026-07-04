@@ -500,3 +500,4 @@ class Trainer():
             metrics(label, pred3, category, self.category_dict)
 
 # Author: 
+# Corresponding Mail: 

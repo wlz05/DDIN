@@ -15,3 +15,4 @@ images_set = set(os.listdir(folder))
 print(len(images_set))
 
 # Author: 
+# Corresponding Mail: 

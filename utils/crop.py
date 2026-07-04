@@ -36,3 +36,4 @@ class RandomResizedCrop(transforms.RandomResizedCrop):
         return i, j, h, w
 
 # Author: 
+# Corresponding Mail: 
