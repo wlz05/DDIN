@@ -621,3 +621,4 @@ class Trainer():
                 category.extend(batch_category.detach().cpu().numpy().tolist())
 
         return metrics(label1, pred0, category, self.category_dict),metrics(label1, pred1, category, self.category_dict),metrics(label1, pred2, category, self.category_dict),metrics(label1, pred3, category, self.category_dict)
+# Author: 

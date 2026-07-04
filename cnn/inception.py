@@ -176,3 +176,4 @@ if __name__ == "__main__":
     x = torch.randn(3, 3, 224, 224)
     model = GoogLeNet(aux_logits=False, num_classes=1000)
     print(model(x)[2].shape)
+# Author: 

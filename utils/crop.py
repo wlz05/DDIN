@@ -34,3 +34,4 @@ class RandomResizedCrop(transforms.RandomResizedCrop):
         j = torch.randint(0, width - w + 1, size=(1,)).item()
 
         return i, j, h, w
+# Author: 
