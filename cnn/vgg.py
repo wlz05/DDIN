@@ -103,4 +103,5 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = VGG_net(in_channels=3, num_classes=1000).to(device)
     print(model)
+
 # Author: 

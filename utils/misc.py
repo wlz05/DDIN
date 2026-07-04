@@ -310,4 +310,5 @@ def all_reduce_mean(x):
         return x_reduce.item()
     else:
         return x
+
 # Author: 

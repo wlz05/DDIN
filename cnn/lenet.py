@@ -54,4 +54,5 @@ def test_lenet():
 if __name__ == "__main__":
     out = test_lenet()
     print(out.shape)
+
 # Author: 
