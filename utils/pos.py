@@ -67,3 +67,4 @@ def interpolate_pos_embed(model, checkpoint_model):
             checkpoint_model['pos_embed'] = new_pos_embed
 
 # Author: 
+# Corresponding Mail: 

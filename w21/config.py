@@ -57,3 +57,4 @@ def del_emoji(ustring):
     return rstring
 
 # Author: 
+# Corresponding Mail: 

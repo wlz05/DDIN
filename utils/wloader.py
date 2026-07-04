@@ -83,3 +83,4 @@ print(f"
 Feature extraction complete! Saved {final_tensor.shape[0]} image features.")
 
 # Author: 
+# Corresponding Mail: 

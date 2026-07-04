@@ -116,3 +116,4 @@ model = model()
 model(image_emb,text_emb,fusion_emb)
 
 # Author: 
+# Corresponding Mail: 
