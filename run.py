@@ -118,4 +118,5 @@ class Run():
                                     save_param_dir=os.path.join(self.save_param_dir, self.model_name),
                                     early_stop=self.early_stop, epoches=self.epoch)
             trainer.train()
+
 # Author: 

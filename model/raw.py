@@ -669,4 +669,5 @@ class Trainer():
 
         metric_res = metricsTrueFalse(label, pred, category, self.category_dict)
         return metric_res
+
 # Author: 

@@ -13,4 +13,5 @@ conduct_download = True
 folder = folders[0]
 images_set = set(os.listdir(folder))
 print(len(images_set))
+
 # Author: 
