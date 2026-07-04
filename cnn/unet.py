@@ -500,3 +500,4 @@ class SuperResModel(UNetModel):
         return super().get_feature_vectors(x, timesteps, **kwargs)
 
 # Author: 
+# Corresponding Mail: 

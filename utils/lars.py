@@ -37,3 +37,4 @@ class LARS(torch.optim.Optimizer):
                 p.add_(mu, alpha=-g['lr'])
 
 # Author: 
+# Corresponding Mail: 
