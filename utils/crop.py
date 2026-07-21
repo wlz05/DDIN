@@ -9,10 +9,10 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 
 class RandomResizedCrop(transforms.RandomResizedCrop):
-    RandomResizedCrop for matching TF/TPU implementation: no for-loop is used.
+    """RandomResizedCrop for matching TF/TPU implementation: no for-loop is used.
     This may lead to results different with torchvision's version.
     Following BYOL's TF code:
-    https://github.com/deepmind/deepmind-research/blob/master/byol/utils/dataset.py#L206
+    https://github.com/deepmind/deepmind-research/blob/master/byol/utils/dataset.py#L206"""
     @staticmethod
     def get_params(img, scale, ratio):
         width, height = F._get_image_size(img)

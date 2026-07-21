@@ -4,8 +4,8 @@
 import json
 
 def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_decay=.75):
-    Parameter groups for layer-wise lr decay
-    Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L58
+    """Parameter groups for layer-wise lr decay
+    Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L58"""
     param_group_names = {}
     param_groups = {}
 
@@ -47,8 +47,8 @@ def param_groups_lrd(model, weight_decay=0.05, no_weight_decay_list=[], layer_de
     return list(param_groups.values())
 
 def get_layer_id_for_vit(name, num_layers):
-    Assign a parameter with its layer id
-    Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33
+    """Assign a parameter with its layer id
+    Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33"""
     if name in ['cls_token', 'pos_embed']:
         return 0
     elif name.startswith('patch_embed'):

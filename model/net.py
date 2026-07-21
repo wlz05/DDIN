@@ -96,8 +96,8 @@ class WarmupCosineAnnealingLR:
                 param_group['lr'] = lr
 
 class MultiScaleSemanticProjection(nn.Module):
-    Multi-scale semantic projection layer - captures polysemy through
-    multiple parallel projection channels.
+    """Multi-scale semantic projection layer - captures polysemy through
+    multiple parallel projection channels."""
 
     def __init__(self, input_dim, output_dim, num_scales=3):
         super(MultiScaleSemanticProjection, self).__init__()
@@ -117,8 +117,8 @@ class MultiScaleSemanticProjection(nn.Module):
         return self.fusion(fused)
 
 class HierarchicalConflictSynergy(nn.Module):
-    Hierarchical conflict synergy - enables cross-granularity conflict
-    features to communicate with each other through a Transformer block.
+    """Hierarchical conflict synergy - enables cross-granularity conflict
+    features to communicate with each other through a Transformer block."""
 
     def __init__(self, hidden_dim, num_heads=4):
         super(HierarchicalConflictSynergy, self).__init__()
@@ -136,8 +136,8 @@ class HierarchicalConflictSynergy(nn.Module):
         return synergized[:, 0], synergized[:, 1], synergized[:, 2]
 
 class DomainAdaptiveWeighting(nn.Module):
-    Domain-adaptive weighting - dynamically adjusts the importance of
-    different conflict signals based on the news domain.
+    """Domain-adaptive weighting - dynamically adjusts the importance of
+    different conflict signals based on the news domain."""
 
     def __init__(self, num_domains, hidden_dim):
         super(DomainAdaptiveWeighting, self).__init__()
@@ -160,8 +160,8 @@ class DomainAdaptiveWeighting(nn.Module):
         return weighted_conflict, gates
 
 class DDIN(nn.Module):
-    DDIN: Domain-aware Disentangled Interaction Network
-    Multimodal fake news detection model.
+    """DDIN: Domain-aware Disentangled Interaction Network
+    Multimodal fake news detection model."""
 
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
                  num_domains=9, hidden_dim=768, num_classes=2, dropout=0.2):
@@ -282,8 +282,8 @@ class DDIN(nn.Module):
             fused_features, adaptive_conflict, text_global_proj, image_global_proj
 
 class AdaptiveContrastiveLoss(nn.Module):
-    Adaptive contrastive loss - enhances cross-modal consistency learning.
-    Uses log_softmax for numerical stability and excludes self-pairs.
+    """Adaptive contrastive loss - enhances cross-modal consistency learning.
+    Uses log_softmax for numerical stability and excludes self-pairs."""
 
     def __init__(self, temperature=0.07):
         super(AdaptiveContrastiveLoss, self).__init__()
@@ -488,10 +488,10 @@ class Trainer():
                     **batch_data)
 
                 label.extend(batch_label.detach().cpu().numpy().tolist())
-                pred0.extend(final_label_pred_list.detach().cpu().numpy().tolist())
-                pred1.extend(fusion_label_pred_list.detach().cpu().numpy().tolist())
-                pred2.extend(image_label_pred_list.detach().cpu().numpy().tolist())
-                pred3.extend(text_label_pred_list.detach().cpu().numpy().tolist())
+                pred0.extend(torch.softmax(final_label_pred_list, dim=-1)[:, 1].detach().cpu().numpy().tolist())
+                pred1.extend(torch.softmax(fusion_label_pred_list, dim=-1)[:, 1].detach().cpu().numpy().tolist())
+                pred2.extend(torch.softmax(image_label_pred_list, dim=-1)[:, 1].detach().cpu().numpy().tolist())
+                pred3.extend(torch.softmax(text_label_pred_list, dim=-1)[:, 1].detach().cpu().numpy().tolist())
                 category.extend(batch_category.detach().cpu().numpy().tolist())
 
         return metrics(label, pred0, category, self.category_dict), \

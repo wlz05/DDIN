@@ -478,7 +478,7 @@ class Trainer():
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.lr,
                                       weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.98)
-        recorder = Recorder(self.early_stop, metric_key=self.metric_key_for_early_stop)
+        recorder = Recorder(self.early_stop)
 
         for epoch in range(self.epoches):
             self.model.train();

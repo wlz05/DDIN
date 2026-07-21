@@ -230,7 +230,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--emb_type` | `bert` | Text embedding type: `bert` or `w2v` |
 | `--early_stop` | `5` | Early stopping patience (epochs) |
 | `--seed` | `3074` | Random seed for reproducibility |
-| `--emb_dim` | `768` | Embedding dimension |
+| `--bert_emb_dim` | `768` | BERT embedding dimension (`--w2v_emb_dim` for w2v mode) |
 
 ---
 

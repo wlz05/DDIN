@@ -59,7 +59,7 @@ def df_filter(df_data):
     return df_data
 
 def word2input(texts, vocab_file, max_len):
-    BERT tokenization with automatic fallback for missing/invalid text.
+    """BERT tokenization with automatic fallback for missing/invalid text."""
     if not os.path.exists(vocab_file):
         raise FileNotFoundError(f"[ERROR] BERT vocab file not found: {vocab_file}")
 
