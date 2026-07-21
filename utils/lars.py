@@ -4,7 +4,7 @@
 import torch
 
 class LARS(torch.optim.Optimizer):
-    LARS optimizer, no rate scaling or weight decay for parameters <= 1D.
+    """LARS optimizer, no rate scaling or weight decay for parameters <= 1D."""
     def __init__(self, params, lr=0, weight_decay=0, momentum=0.9, trust_coefficient=0.001):
         defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum, trust_coefficient=trust_coefficient)
         super().__init__(params, defaults)

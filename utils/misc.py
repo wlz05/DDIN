@@ -13,7 +13,8 @@ import torch.distributed as dist
 from torch._six import inf
 
 class SmoothedValue(object):
-    window or the global series average.
+    """Track a series of values and provide access to smoothed values over a
+    window or the global series average."""
 
     def __init__(self, window_size=20, fmt=None):
         if fmt is None:
@@ -29,7 +30,7 @@ class SmoothedValue(object):
         self.total += value * n
 
     def synchronize_between_processes(self):
-        Warning: does not synchronize the deque!
+        """Warning: does not synchronize the deque!"""
         if not is_dist_avail_and_initialized():
             return
         t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
@@ -153,7 +154,7 @@ class MetricLogger(object):
             header, total_time_str, total_time / len(iterable)))
 
 def setup_for_distributed(is_master):
-    This function disables printing when not in master process
+    """This function disables printing when not in master process"""
     builtin_print = builtins.print
 
     def print(*args, **kwargs):
