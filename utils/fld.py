@@ -88,12 +88,13 @@ class bert_data():
         content = self.data[text_col].to_numpy()
         label = torch.tensor(self.data[label_col].astype(int).to_numpy())
 
+        fallback_id = self.category_dict.get("Uncategorized", 0) if self.category_dict else 0
         if "category" in self.data.columns and self.category_dict:
             category = torch.tensor(self.data["category"].apply(
-                lambda c: self.category_dict.get(str(c), 0)).to_numpy())
+                lambda c: self.category_dict.get(str(c), fallback_id)).to_numpy())
         elif "domain" in self.data.columns and self.category_dict:
             category = torch.tensor(self.data["domain"].apply(
-                lambda c: self.category_dict.get(str(c), 0)).to_numpy())
+                lambda c: self.category_dict.get(str(c), fallback_id)).to_numpy())
         else:
             category = torch.zeros(len(self.data), dtype=torch.long)
 
