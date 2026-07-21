@@ -79,8 +79,7 @@ try:
 except Exception as e:
     raise IOError(f"[ERROR] Failed to save feature files: {e}")
 
-print(f"
-Feature extraction complete! Saved {final_tensor.shape[0]} image features.")
+print(f"\nFeature extraction complete! Saved {final_tensor.shape[0]} image features.")
 
-# Author: 
-# Corresponding Mail: 
+# Author:
+# Corresponding Mail:

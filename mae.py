@@ -95,9 +95,9 @@ class MaskedAutoencoderViT(nn.Module):
         return imgs
 
     def random_masking(self, x, mask_ratio):
-        Perform per-sample random masking by per-sample shuffling.
+        """Perform per-sample random masking by per-sample shuffling.
         Per-sample shuffling is done by argsort random noise.
-        x: [N, L, D], sequence
+        x: [N, L, D], sequence"""
         N, L, D = x.shape  # batch, length, dim
         len_keep = int(L * (1 - mask_ratio))
         
@@ -153,9 +153,9 @@ class MaskedAutoencoderViT(nn.Module):
         return x
 
     def forward_loss(self, imgs, pred, mask):
-        imgs: [N, 3, H, W]
+        """imgs: [N, 3, H, W]
         pred: [N, L, p*p*3]
-        mask: [N, L], 0 is keep, 1 is remove, 
+        mask: [N, L], 0 is keep, 1 is remove,"""
         target = self.patchify(imgs)
         if self.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)

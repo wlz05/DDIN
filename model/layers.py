@@ -366,18 +366,18 @@ class DomainAwareGating(nn.Module):
         return torch.softmax(logits, dim=-1)
 
 class SupervisedContrastiveLoss(nn.Module):
-    Supervised Contrastive Learning Loss
-    Reference: https://arxiv.org/abs/2004.11362
+    """Supervised Contrastive Learning Loss
+    Reference: https://arxiv.org/abs/2004.11362"""
 
     def __init__(self, temperature=0.07):
         super(SupervisedContrastiveLoss, self).__init__()
         self.temperature = temperature
 
     def forward(self, features_text, features_image, labels):
-        Args:
+        """Args:
             features_text: (batch_size, dim) - text global features
             features_image: (batch_size, dim) - image global features
-            labels: (batch_size,) - ground truth labels (0/1)
+            labels: (batch_size,) - ground truth labels (0/1)"""
         batch_size = features_text.shape[0]
 
         features_text = F.normalize(features_text, dim=1)
@@ -408,12 +408,12 @@ class SupervisedContrastiveLoss(nn.Module):
         return loss
 
 class FocalLoss(nn.Module):
-    Focal Loss for addressing class imbalance and focusing on hard examples
+    """Focal Loss for addressing class imbalance and focusing on hard examples
     Reference: https://arxiv.org/abs/1708.02002
 
     Args:
         alpha: Weighting factor in range (0,1) to balance positive/negative examples
-        gamma: Exponent of the modulating factor (1 - p_t)^gamma
+        gamma: Exponent of the modulating factor (1 - p_t)^gamma"""
 
     def __init__(self, alpha=0.25, gamma=2.0):
         super(FocalLoss, self).__init__()
@@ -421,9 +421,9 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        Args:
+        """Args:
             inputs: (batch_size,) - predicted probabilities (after sigmoid)
-            targets: (batch_size,) - ground truth labels (0 or 1)
+            targets: (batch_size,) - ground truth labels (0 or 1)"""
         bce_loss = F.binary_cross_entropy(inputs, targets, reduction='none')
 
         p_t = inputs * targets + (1 - inputs) * (1 - targets)
