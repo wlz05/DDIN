@@ -265,9 +265,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             nn.Linear(self.unified_dim, 1),
         )
         self.adaIN = AdaIN()
-        self.irrelevant_tensor = []
-        for i in range(self.domain_num):
-            self.irrelevant_tensor.append(nn.Parameter(torch.ones((1, 320)), requires_grad=True))
+        self.irrelevant_tensor = nn.ParameterList(
+            [nn.Parameter(torch.ones((1, 320)), requires_grad=True) for _ in range(self.domain_num)])
 
         self.ClipModel,_ = load_from_name("ViT-B-16", device="cuda", download_root='./')
     def forward(self, **kwargs):
@@ -600,8 +599,6 @@ class Trainer():
                 batch_data = clipdata2gpu(batch)
                 label = batch_data['label']
                 batch_category = batch_data['category']
-                print(batch_category)
-                aaaaaa
                 final_label_pred_list,fusion_label_pred_list,image_label_pred_list,text_label_pred_list= self.model(**batch_data)
 
                 idxs = torch.tensor([index for index in batch_category]).view(-1, 1)

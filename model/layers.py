@@ -13,11 +13,11 @@ class EmbeddingLayer(torch.nn.Module):
     def __init__(self, field_dims, embed_dim):
         super().__init__()
         self.embedding = torch.nn.Embedding(sum(field_dims), embed_dim)
-        self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.long)
+        self.offsets = np.array((0, *np.cumsum(field_dims)[:-1]), dtype=np.int64)
         torch.nn.init.xavier_uniform_(self.embedding.weight.data)
 
     def forward(self, x):
-        x = x + x.new_tensor(self.offsets).unsqueeze(0)
+        x = x + x.new_tensor(self.offsets, dtype=torch.long).unsqueeze(0)
         return self.embedding(x)
 
 class MultiLayerPerceptron(torch.nn.Module):
@@ -161,10 +161,10 @@ class image_extractor(torch.nn.Module):
         return img_out
 
 class classifier(torch.nn.Module):
-    def __init__(self, out_dim=1):
+    def __init__(self, unified_dim, out_dim=1):
         super(classifier, self).__init__()
         self.trim = nn.Sequential(
-            nn.Linear(self.unified_dim, 64),
+            nn.Linear(unified_dim, 64),
             nn.SiLU(),
         )
         self.classifier1 = nn.Sequential(nn.Linear(64, out_dim))

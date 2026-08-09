@@ -64,12 +64,18 @@ class ResNet(nn.Module):
         self.use_SRM = use_SRM
         if self.use_SRM:
             self.BayarConv2D = nn.Conv2d(image_channels, 3, 5, 1, padding=2, bias=False)
-            self.bayar_mask = (torch.tensor(np.ones(shape=(5, 5)))).cuda()
+            self.bayar_mask = torch.tensor(np.ones(shape=(5, 5)), dtype=torch.float32)
             self.bayar_mask[2, 2] = 0
-            self.bayar_final = (torch.tensor(np.zeros((5, 5)))).cuda()
+            self.bayar_final = torch.tensor(np.zeros((5, 5)), dtype=torch.float32)
             self.bayar_final[2, 2] = -1
 
-            self.relu = nn.ELU()
+            # Apply Bayar constraint once at init
+            with torch.no_grad():
+                self.BayarConv2D.weight.data *= self.bayar_mask
+                self.BayarConv2D.weight.data *= torch.pow(self.BayarConv2D.weight.data.sum(axis=(2, 3)).view(3, 3, 1, 1), -1)
+                self.BayarConv2D.weight.data += self.bayar_final
+
+            self.srm_act = nn.ELU()
 
         self.conv1 = nn.Conv2d(image_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -94,12 +100,8 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         if self.use_SRM:
-            self.BayarConv2D.weight.data *= self.bayar_mask
-            self.BayarConv2D.weight.data *= torch.pow(self.BayarConv2D.weight.data.sum(axis=(2, 3)).view(3, 3, 1, 1),-1)
-            self.BayarConv2D.weight.data += self.bayar_final
             conv_bayar = self.BayarConv2D(x)
-
-            x = self.relu(x)
+            x = self.srm_act(conv_bayar)
 
         x = self.conv1(x)
         x = self.bn1(x)

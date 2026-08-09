@@ -316,9 +316,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             nn.Linear(self.unified_dim, 1),
         )
         self.adaIN = AdaIN()
-        self.irrelevant_tensor = []
-        for i in range(self.domain_num):
-            self.irrelevant_tensor.append(nn.Parameter(torch.ones((1, 320)), requires_grad=True))
+        self.irrelevant_tensor = nn.ParameterList(
+            [nn.Parameter(torch.ones((1, 320)), requires_grad=True) for _ in range(self.domain_num)])
 
         self.ClipModel, _ = load_from_name("ViT-B-16", device="cuda", download_root='./')
 
@@ -542,7 +541,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                 gate_share_expert += (
                         fusion_tmp_expert0 * self.fusion_gate_out_list0[m][:, (self.num_expert + n)].unsqueeze(1))
             fusion_gate_share_expert_value0.append(gate_share_expert)
-            fusion_experts_feature = fusion_tmp_expert0
+            fusion_experts_feature = share_gate_expert0
 
         att = F.softmax(self.att_mlp_mm(fusion_experts_feature), dim=-1)
         fusion_experts_feature0 = att[:, 0].view(-1, 1) * fusion_experts_feature

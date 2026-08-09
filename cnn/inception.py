@@ -15,10 +15,16 @@ class GoogLeNet(nn.Module):
         if  self.use_SRM:
             print("We are using SRM in Inception")
             self.BayarConv2D = nn.Conv2d(3, 3, 5, 1, padding=2, bias=False)
-            self.bayar_mask = (torch.tensor(np.ones(shape=(5, 5)))).cuda()
+            self.bayar_mask = torch.tensor(np.ones(shape=(5, 5)), dtype=torch.float32)
             self.bayar_mask[2, 2] = 0
-            self.bayar_final = (torch.tensor(np.zeros((5, 5)))).cuda()
+            self.bayar_final = torch.tensor(np.zeros((5, 5)), dtype=torch.float32)
             self.bayar_final[2, 2] = -1
+
+            # Apply Bayar constraint once at init
+            with torch.no_grad():
+                self.BayarConv2D.weight.data *= self.bayar_mask
+                self.BayarConv2D.weight.data *= torch.pow(self.BayarConv2D.weight.data.sum(axis=(2, 3)).view(3, 3, 1, 1), -1)
+                self.BayarConv2D.weight.data += self.bayar_final
 
         self.conv1 = conv_block(
             in_channels=image_channels,
@@ -61,12 +67,8 @@ class GoogLeNet(nn.Module):
 
     def forward(self, x):
         if self.use_SRM:
-            self.BayarConv2D.weight.data *= self.bayar_mask
-            self.BayarConv2D.weight.data *= torch.pow(self.BayarConv2D.weight.data.sum(axis=(2, 3)).view(3, 3, 1, 1),-1)
-            self.BayarConv2D.weight.data += self.bayar_final
             conv_bayar = self.BayarConv2D(x)
-
-            x = conv_bayar #torch.cat((conv_srm, conv_bayar), dim=1)
+            x = conv_bayar  # torch.cat((conv_srm, conv_bayar), dim=1)
 
         x = self.conv1(x)
         x = self.maxpool1(x)
