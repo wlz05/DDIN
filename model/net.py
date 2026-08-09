@@ -499,5 +499,5 @@ class Trainer():
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

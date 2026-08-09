@@ -105,5 +105,5 @@ for split in SPLITS:
 
 print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
 
-# Author:
-# Corresponding Mail:
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

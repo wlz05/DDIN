@@ -389,12 +389,12 @@ class SupervisedContrastiveLoss(nn.Module):
 
         similarity_matrix = torch.matmul(features, features.T) / self.temperature
 
-        mask = torch.eq(labels, labels.T).float().cuda()
+        mask = torch.eq(labels, labels.T).float().to(features.device)
 
         logits_mask = torch.scatter(
             torch.ones_like(mask),
             1,
-            torch.arange(batch_size * 2).view(-1, 1).cuda(),
+            torch.arange(batch_size * 2).view(-1, 1).to(features.device),
             0
         )
         mask = mask * logits_mask
@@ -436,5 +436,5 @@ class FocalLoss(nn.Module):
 
         return focal_loss.mean()
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

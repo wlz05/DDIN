@@ -344,5 +344,5 @@ class Trainer():
 
         return metricsTrueFalse(all_labels, all_preds, all_categories, self.category_dict)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

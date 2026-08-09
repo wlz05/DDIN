@@ -177,5 +177,5 @@ if __name__ == "__main__":
     model = GoogLeNet(aux_logits=False, num_classes=1000)
     print(model(x)[2].shape)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

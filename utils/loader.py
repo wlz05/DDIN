@@ -156,5 +156,5 @@ class bert_data():
         print(f"[INFO] Dataloader created: {len(token_ids)} samples, batch_size={self.batch_size}")
         return dataloader
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

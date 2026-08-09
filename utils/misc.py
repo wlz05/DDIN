@@ -312,5 +312,5 @@ def all_reduce_mean(x):
     else:
         return x
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

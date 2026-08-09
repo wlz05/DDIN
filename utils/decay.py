@@ -58,5 +58,5 @@ def get_layer_id_for_vit(name, num_layers):
     else:
         return num_layers
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

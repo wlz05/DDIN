@@ -14,5 +14,5 @@ folder = folders[0]
 images_set = set(os.listdir(folder))
 print(len(images_set))
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

@@ -164,5 +164,5 @@ plt.savefig(output_filename, dpi=300, bbox_inches='tight')
 logger.info(f"Visualization saved to: {output_filename}")
 plt.show()
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

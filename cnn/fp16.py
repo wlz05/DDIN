@@ -52,5 +52,5 @@ def zero_grad(model_params):
             param.grad.detach_()
             param.grad.zero_()
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

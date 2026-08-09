@@ -947,5 +947,5 @@ class Trainer():
 
         return metric_res
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

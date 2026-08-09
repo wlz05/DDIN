@@ -602,9 +602,8 @@ class Trainer():
         self.bert = bert
         self.dropout = dropout
         if not os.path.exists(save_param_dir):
-            self.save_param_dir = os.makedirs(save_param_dir)
-        else:
-            self.save_param_dir = save_param_dir
+            os.makedirs(save_param_dir)
+        self.save_param_dir = save_param_dir
 
     def train(self):
         self.model = MultiDomainPLEFENDModel(self.emb_dim, self.mlp_dims, self.bert, 320, self.dropout)
@@ -692,5 +691,5 @@ class Trainer():
         metric_res = metricsTrueFalse(label, pred, category, self.category_dict)
         return metric_res
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

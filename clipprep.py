@@ -144,5 +144,5 @@ val_loader = loader.load_data_val("data/val_origin.csv", True)
 test_loader = loader.load_data_test("data/test_origin.csv", True)
 train_loader = loader.load_data_train("data/train_origin.csv", True)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com
