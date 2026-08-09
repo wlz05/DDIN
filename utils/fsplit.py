@@ -83,5 +83,5 @@ print("[INFO] Splits are pairwise disjoint, val != test. No leakage.")
 print("[INFO] Saved train.csv / val.csv / test.csv to ./FineFake/")
 print("[INFO] Next step: run utils/extract.py to build per-split image pkls.")
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com

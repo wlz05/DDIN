@@ -54,5 +54,5 @@ def zero_grad(model_params):
             param.grad.detach_()
             param.grad.zero_()
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com

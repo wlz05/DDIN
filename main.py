@@ -87,5 +87,5 @@ if args.dataset == 'finefake':
 if __name__ == '__main__':
     Run(config=config).main()
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com

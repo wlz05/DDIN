@@ -135,5 +135,5 @@ class Trainer():
 
         return metrics(label, pred, category, self.category_dict)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com

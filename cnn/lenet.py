@@ -55,5 +55,5 @@ if __name__ == "__main__":
     out = test_lenet()
     print(out.shape)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com

@@ -104,5 +104,5 @@ if __name__ == "__main__":
     model = VGG_net(in_channels=3, num_classes=1000).to(device)
     print(model)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu 2026/08/09
 # Email: wlzchina05@gmail.com
