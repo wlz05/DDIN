@@ -8,13 +8,15 @@ def convert_module_to_f16(l):
     """Convert primitive modules to float16."""
     if isinstance(l, (nn.Conv1d, nn.Conv2d, nn.Conv3d)):
         l.weight.data = l.weight.data.half()
-        l.bias.data = l.bias.data.half()
+        if l.bias is not None:
+            l.bias.data = l.bias.data.half()
 
 def convert_module_to_f32(l):
     """Convert primitive modules to float32, undoing convert_module_to_f16()."""
     if isinstance(l, (nn.Conv1d, nn.Conv2d, nn.Conv3d)):
         l.weight.data = l.weight.data.float()
-        l.bias.data = l.bias.data.float()
+        if l.bias is not None:
+            l.bias.data = l.bias.data.float()
 
 def make_master_params(model_params):
     """Copy model parameters into a (differently-shaped) list of full-precision
@@ -30,7 +32,7 @@ def model_grads_to_master_grads(model_params, master_params):
     """Copy the gradients from the model parameters into the master parameters
     from make_master_params()."""
     master_params[0].grad = _flatten_dense_tensors(
-        [param.grad.data.detach().float() for param in model_params]
+        [param.grad.data.detach().float() for param in model_params if param.grad is not None]
     )
 
 def master_params_to_model_params(model_params, master_params):

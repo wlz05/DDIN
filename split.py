@@ -30,9 +30,12 @@ def process_reasoning_data(input_file, output_file):
             elif match.startswith('3)'):
                 cross_content = match[2:].strip()
 
-        df.at[index, 'text_reasoning'] = text_content
-        df.at[index, 'image_reasoning'] = image_content
-        df.at[index, 'cross_modal_reasoning'] = cross_content
+        if text_content:
+            df.at[index, 'text_reasoning'] = text_content
+        if image_content:
+            df.at[index, 'image_reasoning'] = image_content
+        if cross_content:
+            df.at[index, 'cross_modal_reasoning'] = cross_content
 
     df.to_csv(output_file, index=False)
     print(f"Processing complete. Saved to {output_file}")
