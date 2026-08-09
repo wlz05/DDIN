@@ -115,5 +115,5 @@ fusion_emb = torch.rand(64,320)
 model = model()
 model(image_emb,text_emb,fusion_emb)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

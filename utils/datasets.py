@@ -52,5 +52,5 @@ def build_transform(is_train, args):
     t.append(transforms.Normalize(mean, std))
     return transforms.Compose(t)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

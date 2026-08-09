@@ -35,5 +35,5 @@ class RandomResizedCrop(transforms.RandomResizedCrop):
 
         return i, j, h, w
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

@@ -162,5 +162,5 @@ def main():
 if __name__ == "__main__":
     main()
 
-# Author:
-# Corresponding Mail:
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

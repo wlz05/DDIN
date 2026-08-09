@@ -42,5 +42,5 @@ if __name__ == "__main__":
     output_csv = "./processed_weibo_reasoning.csv"
     process_reasoning_data(input_csv, output_csv)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

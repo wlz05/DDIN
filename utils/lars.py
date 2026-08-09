@@ -36,5 +36,5 @@ class LARS(torch.optim.Optimizer):
                 mu.mul_(g['momentum']).add_(dp)
                 p.add_(mu, alpha=-g['lr'])
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com

@@ -225,5 +225,5 @@ class Recorder():
     def showfinal(self):
         print("Max", self.max)
 
-# Author: 
-# Corresponding Mail: 
+# Author: Weiliang Zhu
+# Email: wlzchina05@gmail.com
