@@ -196,5 +196,5 @@ class dataset(data.Dataset):
     def __len__(self):
         return len(self.label_dict)
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

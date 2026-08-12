@@ -172,5 +172,5 @@ class Recorder():
     def showfinal(self):
         print("Max", self.max)
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

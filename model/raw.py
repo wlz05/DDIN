@@ -671,5 +671,5 @@ class Trainer():
         metric_res = metricsTrueFalse(label, pred, category, self.category_dict)
         return metric_res
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

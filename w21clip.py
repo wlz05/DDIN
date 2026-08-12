@@ -145,5 +145,5 @@ val_loader = loader.load_data_val("weibo21/val_datasets.xlsx", True)#torch.Size(
 test_loader = loader.load_data_test("weibo21/test_datasets.xlsx", True)#torch.Size([615, 3, 224, 224])
 train_loader = loader.load_data_train("weibo21/train_datasets.xlsx", True)#torch.Size([4926, 3, 224, 224])
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

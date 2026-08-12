@@ -156,5 +156,5 @@ class bert_data():
         print(f"[INFO] Dataloader created: {len(token_ids)} samples, batch_size={self.batch_size}")
         return dataloader
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

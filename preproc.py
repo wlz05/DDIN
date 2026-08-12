@@ -189,5 +189,5 @@ val_loader = loader.load_data_val("data/val_origin.csv", True)
 test_loader = loader.load_data_test("data/test_origin.csv", True)
 train_loader = loader.load_data_train("data/train_origin.csv", True)
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

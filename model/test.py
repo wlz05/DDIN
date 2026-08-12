@@ -115,5 +115,5 @@ fusion_emb = torch.rand(64,320)
 model = model()
 model(image_emb,text_emb,fusion_emb)
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com
