@@ -436,5 +436,5 @@ class FocalLoss(nn.Module):
 
         return focal_loss.mean()
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

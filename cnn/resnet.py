@@ -159,7 +159,8 @@ def test():
     y = net(torch.randn(4, 3, 224, 224)).to("cuda")
     print(y.size())
 
-test()
+if __name__ == '__main__':
+    test()
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

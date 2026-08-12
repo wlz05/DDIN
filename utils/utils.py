@@ -46,58 +46,6 @@ class Averager():
     def item(self):
         return self.v
 
-def metrics(y_true, y_pred, category, category_dict):
-    res_by_category = {}
-    metrics_by_category = {}
-    reverse_category_dict = {}
-    for k, v in category_dict.items():
-        reverse_category_dict[v] = k
-        res_by_category[k] = {"y_true": [], "y_pred": []}
-
-    for i, c in enumerate(category):
-        c = reverse_category_dict[c]
-        res_by_category[c]['y_true'].append(y_true[i])
-        res_by_category[c]['y_pred'].append(y_pred[i])
-
-    for c, res in res_by_category.items():
-        try:
-            metrics_by_category[c] = {
-                'auc': roc_auc_score(res['y_true'], res['y_pred']).round(4).tolist()
-            }
-        except Exception as e:
-            metrics_by_category[c] = {
-                'auc': 0
-            }
-
-        metrics_by_category['auc'] = roc_auc_score(y_true, y_pred, average='macro')
-        y_pred = np.around(np.array(y_pred)).astype(int)
-        metrics_by_category['metric'] = f1_score(y_true, y_pred, average='macro')
-        metrics_by_category['recall'] = recall_score(y_true, y_pred, average='macro')
-        metrics_by_category['precision'] = precision_score(y_true, y_pred, average='macro')
-        metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
-
-    for c, res in res_by_category.items():
-        try:
-            metrics_by_category[c] = {
-                'precision': precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                             average='macro').round(4).tolist(),
-                'recall': recall_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                       average='macro').round(4).tolist(),
-                'fscore': f1_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                   average='macro').round(4).tolist(),
-                'auc': metrics_by_category[c]['auc'],
-                'acc': accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)).round(4)
-            }
-        except Exception as e:
-            metrics_by_category[c] = {
-                'precision': 0,
-                'recall': 0,
-                'fscore': 0,
-                'auc': 0,
-                'acc': 0
-            }
-    return metrics_by_category
-
 def metricsTrueFalse(y_true, y_pred, category, category_dict):
     y_GT = y_true
     metricsTrueFalse = metrics(y_true, y_pred, category, category_dict)
@@ -168,7 +116,7 @@ def metrics(y_true, y_pred, category, category_dict):
     for c, res in res_by_category.items():
         try:
             metrics_by_category[c] = {
-                'auc': roc_auc_score(res['y_true'], res['y_pred']).round(4).tolist()
+                'auc': round(roc_auc_score(res['y_true'], res['y_pred']), 4)
             }
         except ValueError:
             pass
@@ -185,14 +133,13 @@ def metrics(y_true, y_pred, category, category_dict):
 
     for c, res in res_by_category.items():
         metrics_by_category[c] = {
-            'precision': precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                         average='macro').round(4).tolist(),
-            'recall': recall_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                   average='macro').round(4).tolist(),
-            'fscore': f1_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int), average='macro').round(
-                4).tolist(),
+            'precision': round(precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
+                                         average='macro'), 4),
+            'recall': round(recall_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
+                                   average='macro'), 4),
+            'fscore': round(f1_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int), average='macro'), 4),
 
-            'acc': accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)).round(4)
+            'acc': round(accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)), 4)
         }
     return metrics_by_category
 class Recorder():
@@ -225,5 +172,5 @@ class Recorder():
     def showfinal(self):
         print("Max", self.max)
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

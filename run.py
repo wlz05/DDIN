@@ -125,5 +125,5 @@ class Run():
                                     early_stop=self.early_stop, epoches=self.epoch)
             trainer.train()
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com
