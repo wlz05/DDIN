@@ -12,10 +12,10 @@ import logging
 from utils.utils import (
     data2gpu,
     Averager,
-    metrics_original_weibo as metrics,  # keep alias for compatibility
+    metrics,
+    calculate_metrics,
     Recorder,
     clipdata2gpu,
-    calculate_metrics,
     metricsTrueFalse
 )
 

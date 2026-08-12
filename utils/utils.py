@@ -142,6 +142,14 @@ def metrics(y_true, y_pred, category, category_dict):
             'acc': round(accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)), 4)
         }
     return metrics_by_category
+
+def calculate_metrics(y_true, y_pred, category=None, category_dict=None):
+    if category is None:
+        category = [0] * len(y_true)
+    if category_dict is None:
+        category_dict = {}
+    return metrics(y_true, y_pred, category, category_dict)
+
 class Recorder():
 
     def __init__(self, early_step):

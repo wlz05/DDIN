@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.sparse
 from scipy.sparse import coo
 import time
-from pivot import *
+from .pivot import *
 class model(torch.nn.Module):
     def __init__(self):
         super(model, self).__init__()
@@ -109,11 +109,12 @@ class model(torch.nn.Module):
         item_emb_final = self.fusion_img_text(image_emb, text_emb,fusion_emb)
         print(item_emb_final.size())
         return item_emb_final
-image_emb = torch.rand(64,320)
-text_emb = torch.rand(64,320)
-fusion_emb = torch.rand(64,320)
-model = model()
-model(image_emb,text_emb,fusion_emb)
+if __name__ == '__main__':
+    image_emb = torch.rand(64,320)
+    text_emb = torch.rand(64,320)
+    fusion_emb = torch.rand(64,320)
+    model = model()
+    model(image_emb,text_emb,fusion_emb)
 
 # Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

@@ -36,20 +36,8 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 ROOT = './FineFake/'
 SPLITS = ['train', 'val', 'test']
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"[INFO] Loading CLIP preprocessor on {device}...")
-_, clip_preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
 
-# Identical to preproc.py / w21prep.py (Weibo / Weibo21 MAE branch input)
-mae_transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-
-def encode_split(split):
+def encode_split(split, clip_preprocess, mae_transform):
     csv_path = os.path.join(ROOT, f'{split}.csv')
     if not os.path.exists(csv_path):
         raise FileNotFoundError(
@@ -100,10 +88,22 @@ def encode_split(split):
           f"(missing: {missing_count}, corrupted: {corrupted_count})")
 
 
-for split in SPLITS:
-    encode_split(split)
+if __name__ == '__main__':
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[INFO] Loading CLIP preprocessor on {device}...")
+    _, clip_preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
 
-print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
+    mae_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+    for split in SPLITS:
+        encode_split(split, clip_preprocess, mae_transform)
+
+    print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
 
 # Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

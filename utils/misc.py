@@ -10,7 +10,7 @@ from pathlib import Path
 
 import torch
 import torch.distributed as dist
-from torch._six import inf
+inf = float('inf')
 
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
@@ -285,7 +285,6 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler):
         client_state = {'epoch': epoch}
         model.save_checkpoint(save_dir=args.output_dir, tag="checkpoint-%s" % epoch_name, client_state=client_state)
 
-import timm.models.layers.helpers
 def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None):
     if args.resume:
         if args.resume.startswith('https'):
