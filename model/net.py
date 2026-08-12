@@ -499,5 +499,5 @@ class Trainer():
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com

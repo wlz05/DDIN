@@ -35,5 +35,5 @@ class RandomResizedCrop(transforms.RandomResizedCrop):
 
         return i, j, h, w
 
-# Author: Weiliang Zhu 2026/08/12
+# Author: Weiliang Zhu 2026
 # Email: wlzchina05@gmail.com
