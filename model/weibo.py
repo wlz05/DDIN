@@ -27,7 +27,7 @@ class BinaryFocalLoss(nn.Module):
             return focal_loss.mean()
         return focal_loss.sum()
 
-from utils.utils_weibo import clipdata2gpu, Averager, metricsTrueFalse, Recorder
+from utils.utils import clipdata2gpu, Averager, metricsTrueFalse, Recorder
 from .layers import MLP, MaskAttention, TokenAttention, cnn_extractor, MLP_fusion, clip_fuion
 from timm.models.vision_transformer import Block
 
@@ -344,5 +344,5 @@ class Trainer():
 
         return metricsTrueFalse(all_labels, all_preds, all_categories, self.category_dict)
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

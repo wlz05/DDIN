@@ -14,5 +14,5 @@ folder = folders[0]
 images_set = set(os.listdir(folder))
 print(len(images_set))
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

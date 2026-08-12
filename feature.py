@@ -100,11 +100,7 @@ model.eval()
 logger.info("Extracting features...")
 all_features, all_labels = [], []
 with torch.no_grad():
-    try:
-        from utils.utils_weibo import clipdata2gpu as c2g
-    except ImportError:
-        from utils.utils import clipdata2gpu as c2g
-        logger.warning("utils_weibo not found, using utils.utils.clipdata2gpu")
+    from utils.utils import clipdata2gpu as c2g
 
     for batch in tqdm(test_loader, desc="Extracting features"):
         batch_data = c2g(batch) if DEVICE.type == 'cuda' else batch
@@ -164,5 +160,5 @@ plt.savefig(output_filename, dpi=300, bbox_inches='tight')
 logger.info(f"Visualization saved to: {output_filename}")
 plt.show()
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

@@ -58,5 +58,5 @@ def get_layer_id_for_vit(name, num_layers):
     else:
         return num_layers
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com

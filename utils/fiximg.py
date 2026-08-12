@@ -74,5 +74,5 @@ if __name__ == '__main__':
             print(f"[ERROR] Failed to process split '{split_name}': {e}")
     print("Image dimension fix complete! Real image features ready!")
 
-# Author: Weiliang Zhu 2026/08/09
+# Author: Weiliang Zhu 2026/08/12
 # Email: wlzchina05@gmail.com
