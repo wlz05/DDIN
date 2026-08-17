@@ -4,6 +4,17 @@
 import torch
 from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_score, roc_auc_score
 import numpy as np
+def batch2dict(batch):
+    """Convert a list batch into the named dict the trainers expect (CPU-safe).
+
+    List order follows the loaders' TensorDataset:
+    content, content_masks, label, category, image, clip_image, clip_text.
+    """
+    if isinstance(batch, dict):
+        return batch
+    keys = ('content', 'content_masks', 'label', 'category',
+            'image', 'clip_image', 'clip_text')
+    return {k: batch[i] for i, k in enumerate(keys) if i < len(batch)}
 def clipdata2gpu(batch):
     if isinstance(batch, dict):
         batch_data = {k: v.cuda() if hasattr(v, 'cuda') else v for k, v in batch.items()}
@@ -132,6 +143,8 @@ def metrics(y_true, y_pred, category, category_dict):
     metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
 
     for c, res in res_by_category.items():
+        if len(res['y_true']) == 0:
+            continue
         metrics_by_category[c] = {
             'precision': round(precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
                                          average='macro'), 4),

@@ -8,7 +8,7 @@ from positional_encodings.torch_encodings import PositionalEncoding1D, Positiona
 from transformers import BertModel
 import torch.nn as nn
 import mae
-from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu
+from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu, batch2dict
 from utils.utils import metricsTrueFalse
 from .layers import *
 from .pivot import *
@@ -386,7 +386,7 @@ class Trainer():
 
             train_iter = tqdm.tqdm(self.train_loader)
             for step, batch in enumerate(train_iter):
-                batch_data = clipdata2gpu(batch) if self.use_cuda else batch
+                batch_data = clipdata2gpu(batch) if self.use_cuda else batch2dict(batch)
                 batch_label = batch_data['label']
 
                 self.optimizer.zero_grad()
@@ -481,7 +481,7 @@ class Trainer():
         data_iter = tqdm.tqdm(dataloader)
         for step_n, batch in enumerate(data_iter):
             with torch.no_grad():
-                batch_data = clipdata2gpu(batch) if self.use_cuda else batch
+                batch_data = clipdata2gpu(batch) if self.use_cuda else batch2dict(batch)
                 batch_label = batch_data['label']
                 batch_category = batch_data['category']
                 final_label_pred_list, fusion_label_pred_list, image_label_pred_list, text_label_pred_list, _, _, _, _ = self.model(
