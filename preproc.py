@@ -15,7 +15,7 @@ from PIL import Image
 import pickle
 def read_image():
     image_list = {}
-    file_list = ['weibo/nonrumor_images/', 'weibo/rumor_images/']
+    file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     for path in file_list:
         if not os.path.exists(path):
             print(f"[WARNING] Image directory not found: {path}, skipping...")
