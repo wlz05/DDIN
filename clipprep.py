@@ -13,7 +13,7 @@ import cn_clip.clip as clip
 from cn_clip.clip import load_from_name, available_models
 def read_image():
     image_list = {}
-    file_list = ['weibo/nonrumor_images/', 'weibo/rumor_images/']
+    file_list = ['data/nonrumor_images/', 'data/rumor_images/']
     device = "cuda" if torch.cuda.is_available() else "cpu"
     _, preprocess = load_from_name("ViT-B-16", device=device, download_root='./model_weights/clip_cn/')
     for path in file_list:
