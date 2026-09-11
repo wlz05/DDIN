@@ -117,7 +117,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         if clip is not None:
             try:
                 clip_device = "cuda" if torch.cuda.is_available() else "cpu"
-                self.ClipModel, _ = load_from_name("ViT-B-16", device=clip_device, download_root='./')
+                self.ClipModel, _ = load_from_name("ViT-B-16", device=clip_device, download_root='./model_weights/clip_cn/')
             except Exception as e:
                 print(f"Warning: Could not load CLIP model. Error: {e}")
                 self.ClipModel = None

@@ -330,13 +330,13 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                             device=device_for_cn_clip,
                             download_root=None if (os.path.isdir(clip_path) or os.path.isfile(clip_path)) else (
                                 clip_path if clip_path and not (os.path.isdir(clip_path) or os.path.isfile(
-                                    clip_path)) else './pretrained_model/clip_cn/'))
+                                    clip_path)) else './model_weights/clip_cn/'))
                     except Exception as e_load:
                         logger.warning(
                             f"Failed to load CN-CLIP using '{clip_path}' as name/path, trying with default name and clip_path as download_root: {e_load}")
                         self.clip_model_cn, _ = cn_clip_lib.load_from_name(cn_clip_vision_model_name,
                                                                            device=device_for_cn_clip,
-                                                                           download_root=clip_path if clip_path else './pretrained_model/clip_cn/')
+                                                                           download_root=clip_path if clip_path else './model_weights/clip_cn/')
 
                     for param in self.clip_model_cn.parameters(): param.requires_grad_(False)
                     logger.info("CN-CLIP model loaded successfully.")

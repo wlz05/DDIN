@@ -319,7 +319,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.irrelevant_tensor = nn.ParameterList(
             [nn.Parameter(torch.ones((1, 320)), requires_grad=True) for _ in range(self.domain_num)])
 
-        self.ClipModel, _ = load_from_name("ViT-B-16", device="cuda", download_root='./')
+        self.ClipModel, _ = load_from_name("ViT-B-16", device="cuda", download_root='./model_weights/clip_cn/')
 
         feature_emb_size = 320
         img_emb_size = 320

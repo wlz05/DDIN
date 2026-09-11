@@ -3,7 +3,6 @@
 
 import pickle
 import cn_clip.clip as clip
-from cn_clip.clip import load_from_name, available_models
 from torch.utils.data import TensorDataset, DataLoader
 from transformers import BertTokenizer
 import torch
@@ -131,9 +130,6 @@ class bert_data():
 
         if len(self.data) == 0:
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        clipmodel, _ = load_from_name("ViT-B-16", device=device, download_root='./')
 
         content = self.data['content'].to_numpy()
         label = torch.tensor(self.data['label'].astype(int).to_numpy())

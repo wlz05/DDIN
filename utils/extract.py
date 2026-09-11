@@ -91,7 +91,7 @@ def encode_split(split, clip_preprocess, mae_transform):
 if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[INFO] Loading CLIP preprocessor on {device}...")
-    _, clip_preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
+    _, clip_preprocess = load_from_name("ViT-B-16", device=device, download_root='./model_weights/clip_cn/')
 
     mae_transform = transforms.Compose([
         transforms.Resize(256),
