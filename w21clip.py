@@ -15,7 +15,7 @@ def read_image():
     image_list = {}
     file_list = ['weibo21/nonrumor_images/', 'weibo21/rumor_images/']
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
+    _, preprocess = load_from_name("ViT-B-16", device=device, download_root='./model_weights/clip_cn/')
     for path in file_list:
         if not os.path.exists(path):
             print(f"[WARNING] Image directory not found: {path}, skipping...")
