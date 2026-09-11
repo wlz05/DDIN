@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 import os
 import tqdm
 import torch
-from transformers import BertModel, CLIPModel
+from transformers import BertModel
+from cn_clip.clip import load_from_name
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -229,7 +230,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             logger.error(f"Failed BERT load {self.bert_path}: {e}")
             self.bert = None
         self.model_size = "base";
-        mae_cp = f'./mae_pretrain_vit_{self.model_size}.pth'
+        mae_cp = f'./model_weights/mae_pretrain_vit_{self.model_size}.pth'
         try:
             self.image_model = mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
             if os.path.exists(mae_cp):
@@ -247,7 +248,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             self.image_model = None
         try:
             logger.info(f"Loading CLIP: {self.clip_path}")
-            self.clip_model = CLIPModel.from_pretrained(self.clip_path, local_files_only=True)
+            self.clip_model, _ = load_from_name(self.clip_path, device="cuda" if self.use_cuda else "cpu", download_root='./model_weights/clip_cn/')
             logger.info("CLIP loaded.")
             for p in self.clip_model.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.clip_model = self.clip_model.cuda()
@@ -359,10 +360,9 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         if self.clip_model:
             try:
                 with torch.no_grad():
-                    clip_img_out = self.clip_model.get_image_features(pixel_values=clip_pixel_values)
+                    clip_img_out = self.clip_model.encode_image(clip_pixel_values)
                     clip_image_embed = clip_img_out / (clip_img_out.norm(dim=-1, keepdim=True) + 1e-8)
-                    clip_txt_out = self.clip_model.get_text_features(input_ids=clip_input_ids,
-                                                                     attention_mask=clip_attention_mask)
+                    clip_txt_out = self.clip_model.encode_text(clip_input_ids)
                     clip_text_embed = clip_txt_out / (clip_txt_out.norm(dim=-1, keepdim=True) + 1e-8)
             except Exception as e:
                 logger.error(f"CLIP error: {e}")

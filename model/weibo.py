@@ -106,7 +106,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.model_size = "base"
         try:
             self.image_model = mae.__dict__[f"mae_vit_{self.model_size}_patch16"](norm_pix_loss=False)
-            checkpoint = torch.load(f'./mae_pretrain_vit_{self.model_size}.pth', map_location='cpu')
+            checkpoint = torch.load(f'./model_weights/mae_pretrain_vit_{self.model_size}.pth', map_location='cpu')
             self.image_model.load_state_dict(checkpoint['model'], strict=False)
             if torch.cuda.is_available(): self.image_model.cuda()
             for param in self.image_model.parameters(): param.requires_grad = False
