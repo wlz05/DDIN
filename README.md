@@ -1,6 +1,6 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-**DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation.
+**DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation. DDIN is accepted by WISE2026 (Research Paper).
 
 Designed for fake news detection on multiple multimodal datasets including Weibo (9 domains), Weibo-21 (9 domains), and FineFake (7 domains).
 
