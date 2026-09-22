@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE2026)
 
 import torch
 from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_score, roc_auc_score

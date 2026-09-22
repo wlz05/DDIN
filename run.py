@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE2026)
 
 import os
 from utils.clipld import bert_data as weibo_data
