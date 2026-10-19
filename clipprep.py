@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE2026)
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
 from torch.utils.data import TensorDataset, DataLoader
 from transformers import BertTokenizer
