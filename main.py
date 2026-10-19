@@ -21,7 +21,7 @@ parser.add_argument('--bert_vocab_file', default='./pretrained_model/chinese_rob
 parser.add_argument('--root_path', default='./data/')
 parser.add_argument('--bert', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch')
 parser.add_argument('--batchsize', type=int, default=64)
-parser.add_argument('--seed', type=int, default=3074)
+parser.add_argument('--seed', type=int, default=42)
 parser.add_argument('--gpu', default='0')
 parser.add_argument('--bert_emb_dim', type=int, default=768)
 parser.add_argument('--w2v_emb_dim', type=int, default=200)
