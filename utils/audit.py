@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE2026)
+# DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
 """
 Split & leakage audit for the three datasets used by DDIN.
