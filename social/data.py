@@ -84,5 +84,5 @@ if __name__ == '__main__':
     df = pd.DataFrame(results)
     df.to_excel('real_datasets.xlsx')
 
-# Author: Weiliang Zhu 2026
+# Author: Weiliang Zhu
 # Email: wlzchina05@gmail.com

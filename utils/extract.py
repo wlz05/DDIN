@@ -105,5 +105,5 @@ if __name__ == '__main__':
 
     print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
 
-# Author: Weiliang Zhu 2026
+# Author: Weiliang Zhu
 # Email: wlzchina05@gmail.com
