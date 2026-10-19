@@ -35,6 +35,7 @@ args.dataset = args.dataset.lower()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 seed = args.seed
+# Seed every random generator before creating the model.
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
