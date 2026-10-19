@@ -36,7 +36,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 ROOT = './FineFake/'
 SPLITS = ['train', 'val', 'test']
 
-
 def encode_split(split, clip_preprocess, mae_transform):
     csv_path = os.path.join(ROOT, f'{split}.csv')
     if not os.path.exists(csv_path):
@@ -52,6 +51,7 @@ def encode_split(split, clip_preprocess, mae_transform):
     missing_count = 0
     corrupted_count = 0
 
+    # Keep both image streams aligned with the CSV rows.
     for _, row in tqdm(df.iterrows(), total=len(df), desc=f"[{split}]"):
         rel = row['image_path']
         img_path = os.path.join(ROOT, str(rel)) if isinstance(rel, str) and rel.strip() else None
@@ -86,7 +86,6 @@ def encode_split(split, clip_preprocess, mae_transform):
     print(f"[{split}] {len(df)} rows -> {loader_path} {tuple(mae_tensor.shape)}, "
           f"{clip_path} {tuple(clip_tensor.shape)} "
           f"(missing: {missing_count}, corrupted: {corrupted_count})")
-
 
 if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"

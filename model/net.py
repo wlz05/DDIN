@@ -25,6 +25,7 @@ class FGM():
         self.backup = {}
 
     def attack(self, emb_name='bert.embeddings.word_embeddings.weight'):
+        # Perturb trainable embeddings along normalized gradients.
         for name, param in self.model.named_parameters():
             if param.requires_grad and emb_name in name:
                 self.backup[name] = param.data.clone()
@@ -61,6 +62,7 @@ class EMA():
                 self.shadow[name] = new_average.clone()
 
     def apply_shadow(self):
+        # Swap in averaged weights for evaluation.
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 assert name in self.shadow
@@ -408,6 +410,7 @@ class Trainer():
                 loss.backward()
 
                 if self.use_fgm and fgm:
+                    # Accumulate adversarial gradients before restoring embeddings.
                     fgm.attack()
                     final_pred_adv, fusion_pred_adv, image_pred_adv, text_pred_adv, \
                         _, _, text_feat_adv, image_feat_adv = self.model(**batch_data)

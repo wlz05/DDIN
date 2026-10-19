@@ -24,11 +24,9 @@ FAIL = "FAIL"
 WARN = "WARN"
 OK = "OK"
 
-
 def norm_hash(text):
     t = "".join(str(text).split()).lower()
     return hashlib.md5(t.encode("utf-8")).hexdigest()
-
 
 def image_tokens(series):
     """Flatten weibo-style 'a.jpg|b.jpg|' image_id columns into a set."""
@@ -40,11 +38,9 @@ def image_tokens(series):
                 tokens.add(tok)
     return tokens
 
-
 def report(status, msg, findings):
     findings.append(status)
     print(f"  [{status}] {msg}")
-
 
 def audit_splits(name, splits, text_col, findings, image_col=None, id_col=None):
     print(f"\n=== {name} ===")
@@ -97,14 +93,11 @@ def audit_splits(name, splits, text_col, findings, image_col=None, id_col=None):
                 else:
                     report(OK, f"{a}/{b}: no shared images", findings)
 
-
 def load_csv(path):
     return pd.read_csv(path) if os.path.exists(path) else None
 
-
 def load_xlsx(path):
     return pd.read_excel(path) if os.path.exists(path) else None
-
 
 def main():
     findings = []
@@ -157,7 +150,6 @@ def main():
         print(f"{n_fail} FAIL, {n_warn} WARN - fix the FAIL items before training.")
         sys.exit(1)
     print(f"0 FAIL, {n_warn} WARN - splits are consistent with the source papers.")
-
 
 if __name__ == "__main__":
     main()
