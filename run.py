@@ -125,5 +125,5 @@ class Run():
                                     early_stop=self.early_stop, epoches=self.epoch)
             trainer.train()
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

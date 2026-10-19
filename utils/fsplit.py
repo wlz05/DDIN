@@ -84,5 +84,5 @@ if __name__ == '__main__':
     print("[INFO] Saved train.csv / val.csv / test.csv to ./FineFake/")
     print("[INFO] Next step: run utils/extract.py to build per-split image pkls.")
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com
