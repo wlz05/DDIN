@@ -12,7 +12,7 @@ Checks, per dataset:
 
 Exit code 1 if any FAIL-level leakage is found.
 
-Usage:  python utils/check_splits.py
+Usage:  python utils/audit.py
 """
 
 import os

@@ -3,7 +3,7 @@
 
 import os
 from utils.clipld import bert_data as weibo_data
-from utils.w21ld import bert_data as weibo21_data
+from utils.social import bert_data as weibo21_data
 from utils.fld import bert_data as finefake_data
 from model.net import Trainer as DDINTrainer
 from model.gossip import Trainer as GossipTrainer

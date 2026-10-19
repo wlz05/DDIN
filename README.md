@@ -50,7 +50,7 @@ DDIN/
 │   ├── layers.py              # Base layers (MLP families, Attention, cnn_extractor, FocalLoss, SupConLoss, classifier)
 │   ├── clip.py                # CLIP-based MoE domain model variant (MultiDomainPLEFENDModel + Trainer)
 │   ├── raw.py                 # Raw DDIN model variant (domain-specific MoE experts, AdaIN)
-│   ├── w21.py                 # Weibo21 domain model variant (same architecture as raw.py, different hyperparams)
+│   ├── social.py              # Weibo21 domain model variant (same architecture as raw.py, different hyperparams)
 │   ├── gossip.py              # FineFake/GossipCop PLE-FEND model (single-domain MoE with CLIP)
 │   ├── domain.py              # Multi-domain PLE-FEND model variant (full-domain MoE)
 │   ├── weibo.py               # Weibo domain model variant (manipulation classifier, gate/expert routing)
@@ -65,16 +65,16 @@ DDIN/
 │   ├── lenet.py               # LeNet-5
 │   ├── unet.py                # U-Net / SuperResModel (diffusion backbone)
 │   ├── nn.py                  # Shared network modules (SiLU, GroupNorm32, EMA, checkpoint)
-│   └── fp16.py                # Mixed-precision conversion utils (fp16↔fp32, master param sync)
+│   └── precision.py           # Mixed-precision conversion utils (fp16↔fp32, master param sync)
 ├── utils/
 │   ├── loader.py              # Generic data loader (Weibo CSV → TensorDataset)
 │   ├── clipld.py              # Weibo CLIP-MAE data loader (text + image pkls)
-│   ├── w21ld.py               # Weibo21 CLIP-MAE data loader (xlsx → TensorDataset)
+│   ├── social.py              # Weibo21 CLIP-MAE data loader (xlsx → TensorDataset)
 │   ├── fld.py                 # FineFake CLIP-MAE data loader (CSV → TensorDataset)
 │   ├── utils.py               # Metrics (AUC, precision/recall/F1), Recorder, clipdata2gpu, data2gpu
 │   ├── extract.py             # FineFake per-split MAE/CLIP image preprocessing (generates pkl files)
 │   ├── fsplit.py              # FineFake official-protocol split (6:2:2, seed 3407, stratified)
-│   ├── check_splits.py        # Split/leakage audit for all three datasets
+│   ├── audit.py               # Split/leakage audit for all three datasets
 │   ├── fiximg.py              # Legacy image pkl fix utility (superseded by extract.py)
 │   ├── datasets.py            # Dataset transforms (timm-based train/val augmentation)
 │   ├── crop.py                # RandomResizedCrop + padding for MAE patching
@@ -100,9 +100,9 @@ DDIN/
 │   ├── train.csv / val.csv / test.csv
 │   ├── f_{train,val,test}_loader.pkl
 │   └── f_{train,val,test}_clip.pkl
-├── w21/                       # Weibo21 data preparation utilities
+├── social/                    # Weibo21 data preparation utilities
 │   ├── data.py                # Image download + text preprocessing
-│   ├── data2.py               # Batch image download script
+│   ├── download.py            # Batch image download script
 │   ├── probe.py               # Data statistics probe
 │   └── config.py              # Text cleaning (emoji removal, fullwidth→halfwidth)
 ├── main.py                    # Entry point (argparse + config build)
@@ -112,8 +112,8 @@ DDIN/
 ├── feature.py                 # t-SNE feature visualization (requires trained model weights)
 ├── preproc.py                 # Weibo MAE image preprocessing → data/
 ├── clipprep.py                # Weibo CLIP image preprocessing → data/
-├── w21prep.py                 # Weibo21 MAE image preprocessing → weibo21/
-├── w21clip.py                 # Weibo21 CLIP image preprocessing → weibo21/
+├── prepare.py                 # Weibo21 MAE image preprocessing → weibo21/
+├── encode.py                  # Weibo21 CLIP image preprocessing → weibo21/
 ├── split.py                   # Reasoning column split utility (parses "1)\2)\3)" annotations)
 ├── probe.py                   # Model probe for shape verification
 ├── requirements.txt           # Python dependencies
@@ -165,6 +165,21 @@ Key dependencies:
 
 ---
 
+## Reproducibility
+
+The experiment setup uses one NVIDIA GeForce RTX 4090 and four random seeds: **42, 52, 3047, and 3407**. The training CLI defaults to seed 42; run each seed separately with `--seed` and report the mean and standard deviation across runs.
+
+```bash
+python -B main.py --dataset weibo21 --gpu 0 --seed 42
+python -B main.py --dataset weibo21 --gpu 0 --seed 52
+python -B main.py --dataset weibo21 --gpu 0 --seed 3047
+python -B main.py --dataset weibo21 --gpu 0 --seed 3407
+```
+
+Keep dataset partitions fixed across training seeds. The FineFake partition seed remains 3407 and is separate from the training seed. Full training requires the datasets and pretrained weights listed below.
+
+All Python filenames contain lowercase letters only. The source folders use Python namespace packages without `__init__.py`; run commands from the repository root in a dedicated environment. Python constructor methods named `__init__` remain unchanged.
+
 ## Pretrained Models
 
 The following pretrained models are required before training:
@@ -206,7 +221,7 @@ mkdir -p ./model_weights/clip_cn/
 python preproc.py && python clipprep.py
 
 # Weibo21 -> weibo21/
-python w21prep.py && python w21clip.py
+python prepare.py && python encode.py
 
 # FineFake -> FineFake/  (1: official-protocol split, 2: per-split image pkls)
 python utils/fsplit.py && python utils/extract.py
@@ -215,7 +230,7 @@ python utils/fsplit.py && python utils/extract.py
 ### 0.1 Verify splits / check for leakage (recommended)
 
 ```bash
-python utils/check_splits.py
+python utils/audit.py
 ```
 
 Prints per-split counts, label/domain distributions, and cross-split
@@ -255,7 +270,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--gpu` | `0` | GPU device ID |
 | `--emb_type` | `bert` | Text embedding type: `bert` (recommended) or `w2v` |
 | `--early_stop` | `5` | Early stopping patience (epochs) |
-| `--seed` | `3074` | Random seed for reproducibility |
+| `--seed` | `42` | Training seed; experimental seeds: 42, 52, 3047, 3407 |
 | `--bert_emb_dim` | `768` | BERT embedding dimension (`--w2v_emb_dim` for w2v mode) |
 
 ---
@@ -274,7 +289,7 @@ Each dataset uses the split defined by its source paper:
 > and used `gossip_test.csv` as **both** validation and test set, leaking the
 > test set into early stopping/model selection. This has been replaced by the
 > disjoint 6:2:2 protocol above; `run.py` now refuses to start if the val and
-> test paths are identical. Run `python utils/check_splits.py` to audit.
+> test paths are identical. Run `python utils/audit.py` to audit.
 >
 > **Label convention:** Weibo and Weibo21 follow the standard rumor-detection
 > convention: **1 = fake (rumor), 0 = real (non-rumor)**. FineFake labels
