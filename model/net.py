@@ -502,5 +502,5 @@ class Trainer():
             metrics(label, pred2, category, self.category_dict), \
             metrics(label, pred3, category, self.category_dict)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

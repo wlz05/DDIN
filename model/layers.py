@@ -436,5 +436,5 @@ class FocalLoss(nn.Module):
 
         return focal_loss.mean()
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com
