@@ -56,5 +56,5 @@ def del_emoji(ustring):
             rstring += chr(inside_code)
     return rstring
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

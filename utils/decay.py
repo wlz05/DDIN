@@ -58,5 +58,5 @@ def get_layer_id_for_vit(name, num_layers):
     else:
         return num_layers
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

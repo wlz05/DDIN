@@ -183,5 +183,5 @@ class bert_data():
         print(f"[INFO] Dataloader created: {n_samples} samples, batch_size={self.batch_size}")
         return dataloader
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

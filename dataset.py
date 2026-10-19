@@ -196,5 +196,5 @@ class dataset(data.Dataset):
     def __len__(self):
         return len(self.label_dict)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

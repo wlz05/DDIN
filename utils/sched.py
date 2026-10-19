@@ -16,5 +16,5 @@ def adjust_learning_rate(optimizer, epoch, args):
             param_group["lr"] = lr
     return lr
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

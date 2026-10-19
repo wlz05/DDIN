@@ -193,5 +193,5 @@ class Recorder():
     def showfinal(self):
         print("Max", self.max)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com
