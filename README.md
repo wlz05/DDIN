@@ -167,7 +167,7 @@ Key dependencies:
 
 ## Reproducibility
 
-The experiment setup uses one NVIDIA GeForce RTX 4090 and four random seeds: **42, 52, 3047, and 3407**. The training CLI defaults to seed 42; run each seed separately with `--seed` and report the mean and standard deviation across runs.
+Experiments use one NVIDIA GeForce RTX 4090 and seeds **42, 52, 3047, and 3407**. The default training seed is 42.
 
 ```bash
 python -B main.py --dataset weibo21 --gpu 0 --seed 42
@@ -176,9 +176,7 @@ python -B main.py --dataset weibo21 --gpu 0 --seed 3047
 python -B main.py --dataset weibo21 --gpu 0 --seed 3407
 ```
 
-Keep dataset partitions fixed across training seeds. The FineFake partition seed remains 3407 and is separate from the training seed. Full training requires the datasets and pretrained weights listed below.
-
-All Python filenames contain lowercase letters only. The source folders use Python namespace packages without `__init__.py`; run commands from the repository root in a dedicated environment. Python constructor methods named `__init__` remain unchanged.
+Dataset partitions remain fixed across training seeds. FineFake uses partition seed 3407.
 
 ## Pretrained Models
 
