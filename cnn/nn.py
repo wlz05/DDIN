@@ -131,5 +131,5 @@ class CheckpointFunction(th.autograd.Function):
         del output_tensors
         return (None, None) + input_grads
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

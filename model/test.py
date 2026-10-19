@@ -116,5 +116,5 @@ if __name__ == '__main__':
     model = model()
     model(image_emb,text_emb,fusion_emb)
 
-# Author: Weiliang Zhu
+# Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com
