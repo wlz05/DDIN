@@ -15,5 +15,5 @@ if __name__ == '__main__':
     images_set = set(os.listdir(folder))
     print(len(images_set))
 
-# Author: Weiliang Zhu 2026
+# Author: Weiliang Zhu
 # Email: wlzchina05@gmail.com

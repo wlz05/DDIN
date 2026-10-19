@@ -132,5 +132,5 @@ class bert_data():
         print(f"[INFO] FineFake Dataloader: {n_samples} samples, batch_size={self.batch_size}")
         return dataloader
 
-# Author: Weiliang Zhu 2026
+# Author: Weiliang Zhu
 # Email: wlzchina05@gmail.com
