@@ -11,11 +11,10 @@ from run import Run
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', default='DDIN', choices=['DDIN', 'Gossip'])
-    # type=str.lower makes --dataset case-insensitive (weibo / WEIBO / Weibo all work);
-    # run.py also lowercases config['dataset'] as a second line of defense.
+    # Normalize dataset names before selecting a loader.
     parser.add_argument('--dataset', default='weibo21', type=str.lower, choices=['weibo', 'weibo21', 'finefake'])
     parser.add_argument('--epoch', type=int, default=50)
-    parser.add_argument('--max_len', type=int, default=197)
+    parser.add_argument('--max_len', type=int, default=128)
     parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--early_stop', type=int, default=5)  # tolerance of 5 to avoid early interruption
     parser.add_argument('--bert_vocab_file', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt')
@@ -72,7 +71,7 @@ def main():
         'bert': args.bert,
         'root_path': args.root_path,
         'official_root': args.official_root,
-        'weight_decay': 5e-5,
+        'weight_decay': 0.01,
         'model': {
             'mlp': {'dims': [384], 'dropout': 0.2}
         },

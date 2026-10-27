@@ -9,6 +9,15 @@ import math
 import torch.nn as nn
 from torch.autograd import Function
 
+def concat_tokens(image_features, text_features):
+    if image_features.ndim != 3 or text_features.ndim != 3 or image_features.shape[0] != text_features.shape[0]:
+        raise ValueError("Token fusion requires aligned batches of image and text sequences")
+    length = max(image_features.shape[1], text_features.shape[1])
+    # Pad sequence lengths before feature-wise concatenation.
+    image_features = F.pad(image_features, (0, 0, 0, length - image_features.shape[1]))
+    text_features = F.pad(text_features, (0, 0, 0, length - text_features.shape[1]))
+    return torch.cat((image_features, text_features), dim=-1)
+
 class EmbeddingLayer(torch.nn.Module):
     def __init__(self, field_dims, embed_dim):
         super().__init__()

@@ -59,7 +59,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.image_dim = 768
         self.bert = BertModel.from_pretrained(bert).requires_grad_(False)
         feature_kernel = {1: 64, 2: 64, 3: 64, 5: 64, 10: 64}
-        self.text_token_len = 197
+        self.text_token_len = 128
         self.image_token_len = 197
 
         text_expert_list = []
@@ -273,7 +273,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         inputs = kwargs['content']
         masks = kwargs['content_masks']
         category = kwargs['category']
-        text_feature = self.bert(inputs, attention_mask=masks)[0]  # ([64, 197, 768])
+        text_feature = self.bert(inputs, attention_mask=masks)[0]  # Encode the text sequence.
         image = kwargs['image']
         image_feature = self.image_model.forward_ying(image)  # ([64, 197, 768])
         clip_image = kwargs['clip_image']
@@ -288,7 +288,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         text_atn_feature = self.text_attention(text_feature,masks)
         image_atn_feature, _ = self.image_attention(image_feature)
-        fusion_feature = torch.cat((image_feature, text_feature), dim=-1)
+        fusion_feature = concat_tokens(image_feature, text_feature)
         fusion_atn_feature, _ = self.fusion_attention(fusion_feature)  # ([64, 1536])
         fusion_atn_feature = self.MLP_fusion0(fusion_atn_feature)
 

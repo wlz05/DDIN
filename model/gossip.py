@@ -196,7 +196,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                  bert_path_or_name,
                  clip_path_or_name,
                  out_channels, dropout, use_cuda=True,
-                 text_token_len=197, image_token_len=197,
+                 text_token_len=128, image_token_len=197,
                  num_domains=2):
         super(MultiDomainPLEFENDModel, self).__init__()
         self.use_cuda = use_cuda;

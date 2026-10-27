@@ -4,7 +4,9 @@
 import ast
 import io
 import logging
+from pathlib import Path
 import pickle
+import sys
 from contextlib import redirect_stdout
 from types import SimpleNamespace
 import unittest
@@ -19,6 +21,48 @@ from model.training import save_state
 from verify.boundary import workspace
 
 class ProtocolTests(unittest.TestCase):
+    def test_paper_defaults_reach_each_dataset_with_fixed_training_seeds(self):
+        import main
+        from run import Run
+        filenames = {
+            'weibo': ('train_origin.csv', 'val_origin.csv', 'test_origin.csv'),
+            'weibo21': ('train_datasets.xlsx', 'val_datasets.xlsx', 'test_datasets.xlsx'),
+            'finefake': ('train.csv', 'val.csv', 'test.csv')
+        }
+        for dataset, expected in filenames.items():
+            for seed in (42, 52, 3047, 3407):
+                with self.subTest(dataset=dataset, seed=seed):
+                    arguments = ['main.py', '--dataset', dataset.upper(), '--seed', str(seed)]
+                    with patch.object(sys, 'argv', arguments), patch.object(main, 'Run') as launch, redirect_stdout(io.StringIO()):
+                        main.main()
+                    config = launch.call_args.kwargs['config']
+                    self.assertEqual((config['max_len'], config['weight_decay'], config['seed']), (128, 0.01, seed))
+                    runner = Run(config)
+                    self.assertEqual(tuple(Path(path).name for path in (runner.train_path, runner.val_path, runner.test_path)), expected)
+                    launch.return_value.main.assert_called_once_with()
+
+    def test_token_fusion_preserves_modalities_at_different_text_lengths(self):
+        source = ast.parse(Path('model/layers.py').read_text(encoding='utf-8'))
+        node = next(item for item in source.body if isinstance(item, ast.FunctionDef) and item.name == 'concat_tokens')
+        namespace = {'torch': torch, 'F': torch.nn.functional}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), 'layers.py', 'exec'), namespace)
+        fuse = namespace['concat_tokens']
+        for image_length, text_length in ((197, 128), (197, 197), (128, 197)):
+            with self.subTest(image=image_length, text=text_length):
+                image = torch.randn(2, image_length, 4, requires_grad=True)
+                text = torch.randn(2, text_length, 4, requires_grad=True)
+                output = fuse(image, text)
+                self.assertEqual(output.shape, (2, max(image_length, text_length), 8))
+                torch.testing.assert_close(output[:, :image_length, :4], image, rtol=0, atol=0)
+                torch.testing.assert_close(output[:, :text_length, 4:], text, rtol=0, atol=0)
+                self.assertEqual(torch.count_nonzero(output[:, image_length:, :4]).item(), 0)
+                self.assertEqual(torch.count_nonzero(output[:, text_length:, 4:]).item(), 0)
+                output.sum().backward()
+                torch.testing.assert_close(image.grad, torch.ones_like(image))
+                torch.testing.assert_close(text.grad, torch.ones_like(text))
+        with self.assertRaisesRegex(ValueError, 'aligned batches'):
+            fuse(torch.zeros(2, 197, 4), torch.zeros(3, 128, 4))
+
     def test_finefake_ratio_and_membership_are_fixed_across_training_seeds(self):
         frame = pd.DataFrame({'text': ['article' + str(index) for index in range(100)], 'label': [index % 2 for index in range(100)]})
         first = paper_split(frame)

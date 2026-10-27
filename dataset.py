@@ -26,7 +26,7 @@ class dataset(data.Dataset):
         is_train=True,
         data_augment=False,
         duplicate_fake_times=0,
-        bert_max_len=197,
+        bert_max_len=128,
         clip_max_len=77,
         category_dict=None
     ):

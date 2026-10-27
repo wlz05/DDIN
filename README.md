@@ -260,7 +260,7 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--official_root` | dataset root | Relative directory containing released partition references |
 | `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake` |
 | `--epoch` | `50` | Number of training epochs |
-| `--max_len` | `197` | Maximum text sequence length |
+| `--max_len` | `128` | Maximum text sequence length |
 | `--batchsize` | `64` | Batch size |
 | `--lr` | `0.0001` | Learning rate |
 | `--gpu` | `0` | GPU device ID |
@@ -268,6 +268,8 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--early_stop` | `5` | Early stopping patience (epochs) |
 | `--seed` | `42` | Training seed; experimental seeds: 42, 52, 3047, 3407 |
 | `--bert_emb_dim` | `768` | BERT embedding dimension |
+
+The AdamW weight decay is **0.01** in the training configuration. Text preparation uses a maximum of **128 tokens**; CLIP follows its encoder context limit.
 
 ---
 

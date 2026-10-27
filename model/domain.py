@@ -253,7 +253,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, bert_path, clip_path, mae_checkpoint_path,
                  dataset_type,
                  out_channels=320, dropout=0.2, use_cuda=True,
-                 text_token_len=197, image_token_len_mae=197,
+                 text_token_len=128, image_token_len_mae=197,
                  cn_clip_vision_model_name="ViT-B-16",
                  cn_clip_text_model_name="RoBERTa-wwm-ext-base-chinese"
                  ):
