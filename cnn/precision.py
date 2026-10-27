@@ -19,8 +19,7 @@ def convert_module_to_f32(l):
             l.bias.data = l.bias.data.float()
 
 def make_master_params(model_params):
-    """Copy model parameters into a (differently-shaped) list of full-precision
-    parameters."""
+    """Copy model parameters into full-precision master parameters."""
     master_params = _flatten_dense_tensors(
         [param.detach().float() for param in model_params]
     )
@@ -29,8 +28,7 @@ def make_master_params(model_params):
     return [master_params]
 
 def model_grads_to_master_grads(model_params, master_params):
-    """Copy the gradients from the model parameters into the master parameters
-    from make_master_params()."""
+    """Copy model gradients into the full-precision master parameters."""
     master_params[0].grad = _flatten_dense_tensors(
         [param.grad.data.detach().float() for param in model_params if param.grad is not None]
     )

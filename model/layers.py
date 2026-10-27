@@ -324,8 +324,8 @@ class LocalLocalInconsistency(nn.Module):
             i_attn_out, _ = i2t_attn(i_out, t_out, t_out)
             i_out = i_norm(i_out + i_attn_out)
 
-        t_conflict = t_out.mean(dim=1)  # (batch, dim)
-        i_conflict = i_out.mean(dim=1)  # (batch, dim)
+        t_conflict = t_out.mean(dim=1)
+        i_conflict = i_out.mean(dim=1)
 
         conflict = torch.cat([t_conflict, i_conflict], dim=-1)
         return self.conflict_aggregator(conflict)
@@ -346,11 +346,11 @@ class GlobalLocalInconsistency(nn.Module):
         out_T, _ = self.attn_T(f_i_glo.unsqueeze(1), f_t_loc, f_t_loc)
         out_I, _ = self.attn_I(f_t_glo.unsqueeze(1), f_i_loc, f_i_loc)
 
-        out_T = out_T.squeeze(1)  # (batch, dim)
-        out_I = out_I.squeeze(1)  # (batch, dim)
+        out_T = out_T.squeeze(1)
+        out_I = out_I.squeeze(1)
 
-        hadamard = out_T * out_I  # (batch, dim)
-        fused = torch.cat([out_T, out_I, hadamard], dim=-1)  # (batch, dim*3)
+        hadamard = out_T * out_I
+        fused = torch.cat([out_T, out_I, hadamard], dim=-1)
 
         return self.fc(fused)
 
@@ -379,26 +379,22 @@ class DomainAwareGating(nn.Module):
         return torch.softmax(logits, dim=-1)
 
 class SupervisedContrastiveLoss(nn.Module):
-    """Supervised Contrastive Learning Loss
-    Reference: https://arxiv.org/abs/2004.11362"""
+    """Compute supervised contrastive loss for paired text and image features."""
 
     def __init__(self, temperature=0.07):
         super(SupervisedContrastiveLoss, self).__init__()
         self.temperature = temperature
 
     def forward(self, features_text, features_image, labels):
-        """Args:
-            features_text: (batch_size, dim) - text global features
-            features_image: (batch_size, dim) - image global features
-            labels: (batch_size,) - ground truth labels (0/1)"""
+        """Compare normalized text and image features using class labels."""
         batch_size = features_text.shape[0]
 
         features_text = F.normalize(features_text, dim=1)
         features_image = F.normalize(features_image, dim=1)
 
-        features = torch.cat([features_text, features_image], dim=0)  # (2*batch, dim)
+        features = torch.cat([features_text, features_image], dim=0)
         labels = labels.contiguous().view(-1, 1)
-        labels = torch.cat([labels, labels], dim=0)  # (2*batch, 1)
+        labels = torch.cat([labels, labels], dim=0)
 
         similarity_matrix = torch.matmul(features, features.T) / self.temperature
 
@@ -421,12 +417,7 @@ class SupervisedContrastiveLoss(nn.Module):
         return loss
 
 class FocalLoss(nn.Module):
-    """Focal Loss for addressing class imbalance and focusing on hard examples
-    Reference: https://arxiv.org/abs/1708.02002
-
-    Args:
-        alpha: Weighting factor in range (0,1) to balance positive/negative examples
-        gamma: Exponent of the modulating factor (1 - p_t)^gamma"""
+    """Downweight easy examples when computing binary classification loss."""
 
     def __init__(self, alpha=0.25, gamma=2.0):
         super(FocalLoss, self).__init__()
@@ -434,9 +425,7 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        """Args:
-            inputs: (batch_size,) - predicted probabilities (after sigmoid)
-            targets: (batch_size,) - ground truth labels (0 or 1)"""
+        """Compute focal loss from predicted probabilities and binary targets."""
         bce_loss = F.binary_cross_entropy(inputs, targets, reduction='none')
 
         p_t = inputs * targets + (1 - inputs) * (1 - targets)

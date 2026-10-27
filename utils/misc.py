@@ -14,8 +14,7 @@ import torch.distributed as dist
 inf = float('inf')
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
-    window or the global series average."""
+    """Track windowed and global averages of a scalar series."""
 
     def __init__(self, window_size=20, fmt=None):
         if fmt is None:

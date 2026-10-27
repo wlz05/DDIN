@@ -31,22 +31,16 @@ class AdaIN(nn.Module):
         super().__init__()
 
     def mu(self, x):
-        """Takes a (n,c,h,w) tensor as input and returns the average across
-        it's spatial dimensions as (h,w) tensor [See eq. 5 of paper]"""
+        """Compute the mean across each sample's feature axis."""
         return torch.sum(x, (1)) / (x.shape[1])
 
     def sigma(self, x):
-        """Takes a (n,c,h,w) tensor as input and returns the variance across
-        it's spatial dimensions as (h,w) tensor [See eq. 6 of paper] Note
-        the permutations are required for broadcasting"""
+        """Compute the deviation across each sample's feature axis."""
         return torch.sqrt(
             (torch.sum((x.permute([1, 0]) - self.mu(x)).permute([1, 0]) ** 2, (1)) + 0.000000023) / (x.shape[1]))
 
     def forward(self, x, mu, sigma):
-        """Takes a content embeding(x) and a style embeding(mu,sigma) and
-        transforms the mean and standard deviation of the content embedding to
-        that of the style. [See eq. 8 of paper] Note the permutations are
-        required for broadcasting"""
+        """Normalize features and apply the supplied style statistics."""
         x_mean = self.mu(x)
         x_std = self.sigma(x)
         x_reduce_mean = x.permute([1, 0]) - x_mean
@@ -80,19 +74,19 @@ class TripleModalFusionNetwork(nn.Module):
         self.fusion_layer = nn.Linear(input_dim * 3, output_dim)
 
     def forward(self, image, text, fused):
-        modal_stack = torch.cat([image, text, fused], dim=1)  # [batch_size, 960]
+        modal_stack = torch.cat([image, text, fused], dim=1)
 
-        interaction = self.modal_interactions(modal_stack)  # [batch_size, 320]
+        interaction = self.modal_interactions(modal_stack)
 
-        weights = self.weight_network(modal_stack)  # [batch_size, 3]
-        weights = weights.unsqueeze(2)  # [batch_size, 3, 1]
+        weights = self.weight_network(modal_stack)
+        weights = weights.unsqueeze(2)
 
         image_weighted = image * weights[:, 0]
         text_weighted = text * weights[:, 1]
         fused_weighted = fused * weights[:, 2]
 
         fused_feature = torch.cat([image_weighted, text_weighted, fused_weighted], dim=1)
-        fused_feature = self.fusion_layer(fused_feature)  # [batch_size, 320]
+        fused_feature = self.fusion_layer(fused_feature)
 
         return fused_feature
 
@@ -428,25 +422,25 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         masks = kwargs['content_masks']
         text_feature = self.bert(inputs, attention_mask=masks)[0]  # Encode the text sequence.
         image = kwargs['image']
-        image_feature = self.image_model.forward_ying(image)  # ([64, 197, 768])
+        image_feature = self.image_model.forward_ying(image)
         clip_image = kwargs['clip_image']
         clip_text = kwargs['clip_text']
         with torch.no_grad():
-            clip_image_feature = self.ClipModel.encode_image(clip_image)  # ([64, 512])
-            clip_text_feature = self.ClipModel.encode_text(clip_text)  # ([64, 512])
+            clip_image_feature = self.ClipModel.encode_image(clip_image)
+            clip_text_feature = self.ClipModel.encode_text(clip_text)
             clip_image_feature /= clip_image_feature.norm(dim=-1, keepdim=True)
             clip_text_feature /= clip_text_feature.norm(dim=-1, keepdim=True)
 
-        clip_fusion_feature = torch.cat((clip_image_feature, clip_text_feature), dim=-1)  # torch.Size([64, 1024])
-        clip_fusion_feature = self.clip_fusion(clip_fusion_feature.float())  # torch.Size([64, 320])
+        clip_fusion_feature = torch.cat((clip_image_feature, clip_text_feature), dim=-1)
+        clip_fusion_feature = self.clip_fusion(clip_fusion_feature.float())
 
         text_atn_feature = self.text_attention(text_feature, masks)
         image_atn_feature, _ = self.image_attention(image_feature)
         fusion_feature = concat_tokens(image_feature, text_feature)
-        fusion_atn_feature, _ = self.fusion_attention(fusion_feature)  # ([64, 1536])
+        fusion_atn_feature, _ = self.fusion_attention(fusion_feature)
         fusion_atn_feature = self.MLP_fusion0(fusion_atn_feature)
 
-        text_gate_input = text_atn_feature  # ([64, 1536])
+        text_gate_input = text_atn_feature
         image_gate_input = image_atn_feature
         fusion_gate_input = fusion_atn_feature
 
@@ -475,7 +469,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             gate_expert = 0
             gate_share_expert = 0
             for j in range(self.num_expert):
-                tmp_expert = self.text_experts[i][j](text_feature)  # ([64, 320])
+                tmp_expert = self.text_experts[i][j](text_feature)
                 gate_expert += (tmp_expert * text_gate_out_list[i][:, j].unsqueeze(1))
             for j in range(self.num_expert * 2):
                 tmp_expert = self.text_share_expert[0][j](text_feature)
@@ -497,7 +491,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             gate_expert = 0
             gate_share_expert = 0
             for j in range(self.num_expert):
-                tmp_expert = self.image_experts[i][j](image_feature)  # ([64, 320])
+                tmp_expert = self.image_experts[i][j](image_feature)
                 gate_expert += (tmp_expert * image_gate_out_list[i][:, j].unsqueeze(1))
             for j in range(self.num_expert * 2):
                 tmp_expert = self.image_share_expert[0][j](image_feature)

@@ -2,14 +2,7 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
 import openpyxl
-# Deletion rules:
-# 1. Keyword filter,
-# 2. Aspect ratio severely imbalanced or too small,
-# 3. Specified image sets,
-# 4. Must be openable by cv2,
-# 5. Must not be questions,
-# 6. Text deduplication,
-# 7. Image deduplication
+# Set text and image filtering options.
 forbidden_words = [
     "zombie", "ring", "sleep_with", "bed",
     "gang_rape", "mistress", "rape", "too_cruel", "steal_child", "idiot", "dumb", "moron", "retard",

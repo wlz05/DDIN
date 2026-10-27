@@ -92,8 +92,8 @@ class dataset(data.Dataset):
         label_col = 'label'
         if label_col not in data_df.columns: raise ValueError(f"CSV {csv_path} missing label column.")
 
-        fake_news_num = 0  # label 0
-        real_news_num = 0  # label 1
+        fake_news_num = 0
+        real_news_num = 0
         valid_labels_count = 0
         if label_col in data_df.columns:
              for label_val in data_df[label_col]:

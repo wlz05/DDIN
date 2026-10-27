@@ -95,9 +95,7 @@ class MaskedAutoencoderViT(nn.Module):
         return imgs
 
     def random_masking(self, x, mask_ratio):
-        """Perform per-sample random masking by per-sample shuffling.
-        Per-sample shuffling is done by argsort random noise.
-        x: [N, L, D], sequence"""
+        """Mask each sample by sorting independent random patch scores."""
         N, L, D = x.shape  # batch, length, dim
         len_keep = int(L * (1 - mask_ratio))
 
@@ -153,9 +151,7 @@ class MaskedAutoencoderViT(nn.Module):
         return x
 
     def forward_loss(self, imgs, pred, mask):
-        """imgs: [N, 3, H, W]
-        pred: [N, L, p*p*3]
-        mask: [N, L], 0 is keep, 1 is remove,"""
+        """Compute reconstruction loss over masked image patches."""
         target = self.patchify(imgs)
         if self.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)
@@ -163,14 +159,14 @@ class MaskedAutoencoderViT(nn.Module):
             target = (target - mean) / (var + 1.e-6)**.5
 
         loss = (pred - target) ** 2
-        loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
+        loss = loss.mean(dim=-1)
 
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
     def forward(self, imgs, mask_ratio=0.75):
         latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
-        pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
+        pred = self.forward_decoder(latent, ids_restore)
         loss = self.forward_loss(imgs, pred, mask)
         return loss, pred, mask
 
@@ -208,9 +204,9 @@ def mae_vit_huge_patch14_dec512d8b(**kwargs):
         mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
-mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
-mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
-mae_vit_huge_patch14 = mae_vit_huge_patch14_dec512d8b  # decoder: 512 dim, 8 blocks
+mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # Use a 512-dimensional decoder with eight blocks.
+mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # Use a 512-dimensional decoder with eight blocks.
+mae_vit_huge_patch14 = mae_vit_huge_patch14_dec512d8b  # Use a 512-dimensional decoder with eight blocks.
 
 # Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

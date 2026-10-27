@@ -68,7 +68,7 @@ class GoogLeNet(nn.Module):
     def forward(self, x):
         if self.use_SRM:
             conv_bayar = self.BayarConv2D(x)
-            x = conv_bayar  # torch.cat((conv_srm, conv_bayar), dim=1)
+            x = conv_bayar
 
         x = self.conv1(x)
         x = self.maxpool1(x)

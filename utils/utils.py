@@ -6,11 +6,7 @@ from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_sc
 import numpy as np
 from copy import deepcopy
 def batch2dict(batch):
-    """Convert a list batch into the named dict the trainers expect (CPU-safe).
-
-    List order follows the loaders' TensorDataset:
-    content, content_masks, label, category, image, clip_image, clip_text.
-    """
+    """Map the loader tensor sequence to the named inputs expected by trainers."""
     if isinstance(batch, dict):
         return batch
     keys = ('content', 'content_masks', 'label', 'category',

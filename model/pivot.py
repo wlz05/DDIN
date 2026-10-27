@@ -308,12 +308,12 @@ class Beyond(Module):
                 "The hidden size (%d) is not a multiple of the number of attention "
                 "heads (%d)" % (emb_size, num_heads))
 
-        self.attention_head_size = int(emb_size / num_heads)  # 16
+        self.attention_head_size = int(emb_size / num_heads)
         self.all_head_size = int(self.num_heads * self.attention_head_size)
-        self.mean_query = nn.Linear(self.emb_size, self.emb_size)  # 128, 128
+        self.mean_query = nn.Linear(self.emb_size, self.emb_size)
         self.mean_key = nn.Linear(self.emb_size, self.emb_size)
         self.mean_value = nn.Linear(self.emb_size, self.emb_size)
-        self.cov_query = nn.Linear(self.emb_size, self.emb_size)  # 128, 128
+        self.cov_query = nn.Linear(self.emb_size, self.emb_size)
         self.cov_key = nn.Linear(self.emb_size, self.emb_size)
         self.cov_value = nn.Linear(self.emb_size, self.emb_size)
         self.elu_activation = nn.ELU()
@@ -386,21 +386,21 @@ class Beyond(Module):
         seq_pri_cov_emb = self.dropout2(seq_pri_cov_emb)
         seq_pri_cov_emb = self.elu_activation(seq_pri_cov_emb) + 1
 
-        attention_mask = mask.permute(0,2,1).unsqueeze(1)  # [bs, 1, 1, seqlen]
+        attention_mask = mask.permute(0,2,1).unsqueeze(1)
         attention_mask = (1.0 - attention_mask) * -10000.0
 
-        mixed_mean_query_layer = self.mean_query(seq_pri_mean_emb)  # [bs, seqlen, hid_size]
-        mixed_mean_key_layer = self.mean_key(seq_pri_mean_emb)  # [bs, seqlen, hid_size]
-        mixed_mean_value_layer = self.mean_value(seq_pri_mean_emb)  # [bs, seqlen, hid_size]
+        mixed_mean_query_layer = self.mean_query(seq_pri_mean_emb)
+        mixed_mean_key_layer = self.mean_key(seq_pri_mean_emb)
+        mixed_mean_value_layer = self.mean_value(seq_pri_mean_emb)
 
-        mixed_cov_query_layer = self.elu_activation(self.cov_query(seq_pri_cov_emb)) + 1  # [bs, seqlen, hid_size]
-        mixed_cov_key_layer = self.elu_activation(self.cov_key(seq_pri_cov_emb)) + 1  # [bs, seqlen, hid_size]
+        mixed_cov_query_layer = self.elu_activation(self.cov_query(seq_pri_cov_emb)) + 1
+        mixed_cov_key_layer = self.elu_activation(self.cov_key(seq_pri_cov_emb)) + 1
         mixed_cov_value_layer = self.elu_activation(self.cov_value(seq_pri_cov_emb)) + 1
 
         attention_head_size = int(self.emb_size / self.num_heads)
-        mean_query_layer = self.transpose_for_scores(mixed_mean_query_layer, attention_head_size)  # [bs, 8, seqlen, 16]
+        mean_query_layer = self.transpose_for_scores(mixed_mean_query_layer, attention_head_size)
         mean_key_layer = self.transpose_for_scores(mixed_mean_key_layer, attention_head_size)
-        mean_value_layer = self.transpose_for_scores(mixed_mean_value_layer, attention_head_size)  # [bs, 8, seqlen, 16]
+        mean_value_layer = self.transpose_for_scores(mixed_mean_value_layer, attention_head_size)
 
         cov_query_layer = self.transpose_for_scores(mixed_cov_query_layer, attention_head_size)
         cov_key_layer = self.transpose_for_scores(mixed_cov_key_layer, attention_head_size)
@@ -409,9 +409,9 @@ class Beyond(Module):
         attention_scores = -wasserstein_distance_matmul(mean_query_layer, cov_query_layer, mean_key_layer,
                                                         cov_key_layer)
 
-        attention_scores = attention_scores / math.sqrt(attention_head_size)  # [bs, 8, seqlen, seqlen]
+        attention_scores = attention_scores / math.sqrt(attention_head_size)
         attention_scores = attention_scores + attention_mask
-        attention_probs = nn.Softmax(dim=-1)(attention_scores)  # [bs, 8, seqlen, seqlen]
+        attention_probs = nn.Softmax(dim=-1)(attention_scores)
         attention_probs = self.dropout(attention_probs)
 
         mean_context_layer = torch.matmul(attention_probs, mean_value_layer)
@@ -515,8 +515,8 @@ class Beyond(Module):
         con_loss = text_con_loss + img_con_loss
         return con_loss
     def transpose_for_scores(self, x, attention_head_size):
-        new_x_shape = x.size()[:-1] + (self.num_heads, attention_head_size)  # [bs, seqlen, 8, 16]
-        x = x.view(*new_x_shape)  #
+        new_x_shape = x.size()[:-1] + (self.num_heads, attention_head_size)
+        x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def forward(self, session_item, sess_price, sess_category, session_len, reversed_sess_item, mask):

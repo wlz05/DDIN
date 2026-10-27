@@ -1,6 +1,6 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection
 
-**DDIN** is a deep learning framework for **multimodal fake news detection**. It leverages a domain-aware disentanglement and interaction network to capture cross-modal inconsistencies between text and images, enabling robust identification of misinformation. DDIN is accepted by [WISE 2026](https://conferences.sigappfr.org/wise2026/) (Research Paper).
+**DDIN** detects multimodal fake news through domain-aware disentanglement and interaction between text and image features. DDIN is accepted by [WISE 2026](https://conferences.sigappfr.org/wise2026/) (Research Paper).
 
 Designed for fake news detection on multiple multimodal datasets including Weibo (9 domains), Weibo-21 (9 domains), and FineFake (7 domains).
 
@@ -400,6 +400,14 @@ python -B -m unittest verify.boundary verify.protocol -v
 The regression suite covers metrics, official partition references, fixed FineFake ratios, aligned image caches, preprocessing views, validation selection, checkpoint restoration, and the training-to-test sequence. Small tensor fixtures exercise the training loop without downloading pretrained backbones.
 
 Custom dataset roots use relative paths through `main.py --root_path`, `utils.fsplit --root`, and `utils.extract --root`.
+
+## Implementation References
+
+- [UNet attention and timestep conditioning](https://github.com/hojonathanho/diffusion/blob/1e0dceb3b3495bbe19116a5e1b3596cd0706c543/diffusion_tf/models/unet.py#L66)
+- [BYOL crop transform](https://github.com/deepmind/deepmind-research/blob/master/byol/utils/dataset.py#L206)
+- [BEiT parameter groups](https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L58) and [layer assignment](https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33)
+- [Supervised contrastive learning](https://arxiv.org/abs/2004.11362)
+- [Focal loss](https://arxiv.org/abs/1708.02002)
 
 ## License
 

@@ -69,8 +69,8 @@ class InvertedResidualBlock(nn.Module):
             stride,
             padding,
             expand_ratio,
-            reduction=4, # squeeze excitation
-            survival_prob=0.8, # for stochastic depth
+            reduction=4,  # Set the squeeze-excitation reduction.
+            survival_prob=0.8,  # Set the stochastic depth survival probability.
     ):
         super(InvertedResidualBlock, self).__init__()
         self.survival_prob = survival_prob
@@ -143,7 +143,7 @@ class EfficientNet(nn.Module):
                         expand_ratio=expand_ratio,
                         stride = stride if layer == 0 else 1,
                         kernel_size=kernel_size,
-                        padding=kernel_size//2, # if k=1:pad=0, k=3:pad=1, k=5:pad=2
+                        padding=kernel_size//2,  # Preserve spatial size with symmetric kernel padding.
                     )
                 )
                 in_channels = out_channels
@@ -173,7 +173,7 @@ def test():
         num_classes=num_classes,
     ).to(device)
 
-    print(model.get_features(x).shape) # (num_examples, num_classes)
+    print(model.get_features(x).shape)
 
 if __name__ == '__main__':
     test()

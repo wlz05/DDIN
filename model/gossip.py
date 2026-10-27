@@ -250,8 +250,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         fk = {1: 320}  # e.g. use one conv with kernel_size=1, output 320 features
 
-        expert_count = self.num_expert  # 6
-        shared_count = expert_count * 2  # 12
+        expert_count = self.num_expert
+        shared_count = expert_count * 2
 
         self.text_experts = nn.ModuleList(
             [nn.ModuleList([cnn_extractor(self.text_dim, fk) for _ in range(expert_count)]) for _ in
@@ -272,8 +272,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             [nn.Sequential(nn.Linear(320, 320), nn.SiLU(), nn.Linear(320, 320)) for _ in range(shared_count)]) for _ in
                                                   range(self.num_share)])
 
-        gate_out_dim = expert_count + shared_count  # 6 + 12 = 18
-        fusion0_out_dim = expert_count * 3  # 6 * 3 = 18
+        gate_out_dim = expert_count + shared_count
+        fusion0_out_dim = expert_count * 3
 
         self.image_gate_list = nn.ModuleList([nn.Sequential(nn.Linear(self.unified_dim, self.unified_dim), nn.SiLU(),
                                                             nn.Linear(self.unified_dim, gate_out_dim),

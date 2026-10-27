@@ -18,7 +18,7 @@ class LARS(torch.optim.Optimizer):
                 if dp is None:
                     continue
 
-                if p.ndim > 1: # if not normalization gamma/beta or bias
+                if p.ndim > 1:  # Apply decay outside normalization and bias parameters.
                     dp = dp.add(p, alpha=g['weight_decay'])
                     param_norm = torch.norm(p)
                     update_norm = torch.norm(dp)

@@ -28,21 +28,15 @@ class AdaIN(nn.Module):
         super().__init__()
 
     def mu(self, x):
-        """Takes a (n,c,h,w) tensor as input and returns the average across
-        it's spatial dimensions as (h,w) tensor [See eq. 5 of paper]"""
+        """Compute the mean across each sample's feature axis."""
         return torch.sum(x,(1))/(x.shape[1])
 
     def sigma(self, x):
-        """Takes a (n,c,h,w) tensor as input and returns the variance across
-        it's spatial dimensions as (h,w) tensor [See eq. 6 of paper] Note
-        the permutations are required for broadcasting"""
+        """Compute the deviation across each sample's feature axis."""
         return torch.sqrt((torch.sum((x.permute([1,0])-self.mu(x)).permute([1,0])**2,(1))+0.000000023)/(x.shape[1]))
 
     def forward(self, x, mu, sigma):
-        """Takes a content embeding(x) and a style embeding(mu,sigma) and
-        transforms the mean and standard deviation of the content embedding to
-        that of the style. [See eq. 8 of paper] Note the permutations are
-        required for broadcasting"""
+        """Normalize features and apply the supplied style statistics."""
         x_mean = self.mu(x)
         x_std = self.sigma(x)
         x_reduce_mean = x.permute([1, 0]) - x_mean
@@ -276,26 +270,26 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         category = kwargs['category']
         text_feature = self.bert(inputs, attention_mask=masks)[0]  # Encode the text sequence.
         image = kwargs['image']
-        image_feature = self.image_model.forward_ying(image)  # ([64, 197, 768])
+        image_feature = self.image_model.forward_ying(image)
         clip_image = kwargs['clip_image']
         clip_text = kwargs['clip_text']
         with torch.no_grad():
-            clip_image_feature = self.ClipModel.encode_image(clip_image)# ([64, 512])
-            clip_text_feature = self.ClipModel.encode_text(clip_text)  # ([64, 512])
+            clip_image_feature = self.ClipModel.encode_image(clip_image)
+            clip_text_feature = self.ClipModel.encode_text(clip_text)
             clip_image_feature /= clip_image_feature.norm(dim=-1, keepdim=True)
             clip_text_feature /= clip_text_feature.norm(dim=-1, keepdim=True)
-        clip_fusion_feature = torch.cat((clip_image_feature, clip_text_feature),dim=-1)#torch.Size([64, 1024])
-        clip_fusion_feature = self.clip_fusion(clip_fusion_feature.float())#torch.Size([64, 320])
+        clip_fusion_feature = torch.cat((clip_image_feature, clip_text_feature),dim=-1)
+        clip_fusion_feature = self.clip_fusion(clip_fusion_feature.float())
 
         text_atn_feature = self.text_attention(text_feature,masks)
         image_atn_feature, _ = self.image_attention(image_feature)
         fusion_feature = concat_tokens(image_feature, text_feature)
-        fusion_atn_feature, _ = self.fusion_attention(fusion_feature)  # ([64, 1536])
+        fusion_atn_feature, _ = self.fusion_attention(fusion_feature)
         fusion_atn_feature = self.MLP_fusion0(fusion_atn_feature)
 
         idxs = torch.tensor([index for index in category]).view(-1, 1).cuda()
-        domain_embedding = self.domain_embedder(idxs).squeeze(1)  ##([32, 768])
-        text_gate_input = torch.cat([domain_embedding, text_atn_feature], dim=-1)  # ([64, 1536])
+        domain_embedding = self.domain_embedder(idxs).squeeze(1)
+        text_gate_input = torch.cat([domain_embedding, text_atn_feature], dim=-1)
         image_gate_input = torch.cat([domain_embedding, image_atn_feature], dim=-1)
         fusion_gate_input = torch.cat([domain_embedding, fusion_atn_feature], dim=-1)
 
@@ -325,8 +319,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             gate_spacial_expert = 0
             gate_share_expert = 0
             for j in range(self.num_expert):
-                tmp_expert = self.text_experts[i][j](text_feature)  # ([64, 320])
-                gate_expert += (tmp_expert * text_gate_out_list[i][:, j].unsqueeze(1))  ##([64, 320]*[64, 1])
+                tmp_expert = self.text_experts[i][j](text_feature)
+                gate_expert += (tmp_expert * text_gate_out_list[i][:, j].unsqueeze(1))
                 gate_spacial_expert += (tmp_expert * text_gate_out_list[i][:, j].unsqueeze(1))
             for j in range(self.num_expert*2):
                 tmp_expert = self.text_share_expert[0][j](text_feature)
@@ -344,8 +338,8 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             gate_spacial_expert = 0
             gate_share_expert = 0
             for j in range(self.num_expert):
-                tmp_expert = self.image_experts[i][j](image_feature)  # ([64, 320])
-                gate_expert += (tmp_expert * image_gate_out_list[i][:, j].unsqueeze(1))  ##([64, 320]*[64, 1])
+                tmp_expert = self.image_experts[i][j](image_feature)
+                gate_expert += (tmp_expert * image_gate_out_list[i][:, j].unsqueeze(1))
                 gate_spacial_expert += (tmp_expert * image_gate_out_list[i][:, j].unsqueeze(1))
             for j in range(self.num_expert*2):
                 tmp_expert = self.image_share_expert[0][j](image_feature)
@@ -446,24 +440,24 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             fusion_atn_score.append(1 - torch.sigmoid(fusion_only_output[i]).clone().detach())
             image_mu.append(self.mapping_IS_MLP_mu(torch.sigmoid(image_only_output[i]).clone().detach().view(-1,1)))
             text_mu.append(self.mapping_T_MLP_mu(torch.sigmoid(text_only_output[i]).clone().detach().view(-1,1)))
-            fusion_mu.append(self.mapping_CC_MLP_mu(fusion_atn_score[i].clone().detach().view(-1,1)))  # 1-aux_atn_score
+            fusion_mu.append(self.mapping_CC_MLP_mu(fusion_atn_score[i].clone().detach().view(-1,1)))
             image_sigma.append(self.mapping_IS_MLP_sigma(torch.sigmoid(image_only_output[i]).clone().detach().view(-1,1)))
             text_sigma.append(self.mapping_T_MLP_sigma(torch.sigmoid(text_only_output[i]).clone().detach().view(-1,1)))
-            fusion_sigma.append(self.mapping_CC_MLP_sigma(fusion_atn_score[i].clone().detach().view(-1,1)))  # 1-aux_atn_score
+            fusion_sigma.append(self.mapping_CC_MLP_sigma(fusion_atn_score[i].clone().detach().view(-1,1)))
 
         concat_feature_list = []
         for i in range(self.domain_num):
-            final_image_feature0 = self.adaIN(final_image_feature[i],image_mu[i],image_sigma[i])  # shared_image_feature * (image_atn_score)
+            final_image_feature0 = self.adaIN(final_image_feature[i],image_mu[i],image_sigma[i])
             final_text_feature0 = self.adaIN(final_text_feature[i], text_mu[i],
-                                             text_sigma[i])  # shared_text_feature * (text_atn_score)
-            final_fusion_feature0 = final_fusion_feature[i]  # shared_mm_feature #* (aux_atn_score)
-            irr_score = torch.ones_like(final_fusion_feature0) * self.irrelevant_tensor[i].cuda()  # torch.ones_like(shared_mm_feature).cuda()
+                                             text_sigma[i])
+            final_fusion_feature0 = final_fusion_feature[i]
+            irr_score = torch.ones_like(final_fusion_feature0) * self.irrelevant_tensor[i].cuda()
             irrelevant_token = self.adaIN(irr_score, fusion_mu[i], fusion_sigma[i])
             concat_feature_main_biased = torch.stack((final_image_feature0,
                                                       final_text_feature0,
                                                       final_fusion_feature0,
                                                       irrelevant_token
-                                                      ), dim=1)#([64, 4, 320])
+                                                      ), dim=1)
             concat_feature_list.append(concat_feature_main_biased)
         final_gate_out_list = []
         for i in range(self.domain_num):
@@ -476,9 +470,9 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         for i in range(self.domain_num):
             gate_expert = 0
             for j in range(self.num_expert):
-                tmp_expert = self.final_experts[i][j](concat_feature_list[i])  # [64, 4, 320]
+                tmp_expert = self.final_experts[i][j](concat_feature_list[i])
                 tmp_expert = tmp_expert[:,0]
-                gate_expert += (tmp_expert * final_gate_out_list[i][:, j].unsqueeze(1))  ##([64, 320]*[64, 1])
+                gate_expert += (tmp_expert * final_gate_out_list[i][:, j].unsqueeze(1))
             for j in range(self.num_expert*2):
                 tmp_expert = self.final_share_expert[0][j](concat_feature_list[i])
                 tmp_expert = tmp_expert[:, 0]
