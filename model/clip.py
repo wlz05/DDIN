@@ -57,7 +57,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.num_share = 1
         self.unified_dim, self.text_dim = emb_dim, 768
         self.image_dim = 768
-        self.bert = BertModel.from_pretrained(bert).requires_grad_(False)
+        self.bert = BertModel.from_pretrained(bert, cache_dir='./model_weights/huggingface').requires_grad_(False)
         feature_kernel = {1: 64, 2: 64, 3: 64, 5: 64, 10: 64}
         self.text_token_len = 128
         self.image_token_len = 197

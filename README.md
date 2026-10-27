@@ -217,6 +217,8 @@ mkdir -p ./model_weights/clip_cn/
 # Place at: ./pretrained_model/w2v/
 ```
 
+Model downloads use `./model_weights/huggingface` for Hugging Face assets, `./model_weights/clip_cn/` for Chinese-CLIP, and `./model_weights/checkpoints` for PyTorch checkpoints. Keep these directories with the project when moving an experiment to another machine.
+
 ---
 
 ## Quick Start

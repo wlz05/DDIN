@@ -10,7 +10,7 @@ import sys
 from contextlib import redirect_stdout
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import pandas as pd
 import torch
 from utils.features import save_features, read_features
@@ -21,6 +21,40 @@ from model.training import save_state
 from verify.boundary import workspace
 
 class ProtocolTests(unittest.TestCase):
+    def test_resnet_keeps_its_pretrained_weights_with_a_relative_cache(self):
+        source = ast.parse(Path('model/layers.py').read_text(encoding='utf-8'))
+        node = next(item for item in source.body if isinstance(item, ast.ClassDef) and item.name == 'image_extractor')
+        backbone = torch.nn.Module()
+        for name in ('conv1', 'bn1', 'relu', 'layer1', 'layer2', 'layer3', 'layer4'):
+            setattr(backbone, name, torch.nn.Identity())
+        backbone.inplanes = 4
+        backbone.load_state_dict = Mock()
+        parameters = {'pretrained': torch.ones(1)}
+        weights = SimpleNamespace(get_state_dict=Mock(return_value=parameters))
+        constructor = Mock(return_value=backbone)
+        namespace = {'torch': torch, 'F': torch.nn.functional, 'resnet18': constructor, 'ResNet18_Weights': SimpleNamespace(IMAGENET1K_V1=weights)}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), 'layers.py', 'exec'), namespace)
+        namespace['image_extractor'](out_channels=4)
+        constructor.assert_called_once_with(weights=None)
+        backbone.load_state_dict.assert_called_once_with(parameters)
+        options = weights.get_state_dict.call_args.kwargs
+        self.assertFalse(Path(options['model_dir']).is_absolute())
+        self.assertTrue(options['model_dir'].startswith('./model_weights/'))
+        self.assertTrue(options['check_hash'])
+
+    def test_remote_resume_uses_a_relative_cache_without_global_changes(self):
+        from utils.misc import load_model
+        model = Mock()
+        state = {'model': {'weight': torch.ones(1)}}
+        args = SimpleNamespace(resume='https://example.test/checkpoint.pth', eval=True)
+        previous = torch.hub.get_dir()
+        with patch('utils.misc.torch.hub.load_state_dict_from_url', return_value=state) as download, redirect_stdout(io.StringIO()):
+            load_model(args, model)
+        model.load_state_dict.assert_called_once_with(state['model'])
+        self.assertFalse(Path(download.call_args.kwargs['model_dir']).is_absolute())
+        self.assertTrue(download.call_args.kwargs['model_dir'].startswith('./model_weights/'))
+        self.assertEqual(torch.hub.get_dir(), previous)
+
     def test_paper_defaults_reach_each_dataset_with_fixed_training_seeds(self):
         import main
         from run import Run

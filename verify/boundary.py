@@ -11,7 +11,7 @@ import sys
 import importlib
 from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import numpy as np
 import torch
 from model.training import FGM, EMA, WarmupCosineAnnealingLR, save_state
@@ -453,7 +453,7 @@ class InterfaceTests(unittest.TestCase):
                 return torch.ones(len(values), 512, dtype=torch.float16)
         modules = {name: ModuleType(name) for name in ('mae', 'transformers', 'timm', 'timm.models', 'timm.models.vision_transformer', 'cn_clip', 'cn_clip.clip')}
         modules['mae'].mae_vit_base_patch16 = lambda **kwargs: ImageBackbone()
-        modules['transformers'].BertModel = SimpleNamespace(from_pretrained=lambda path: TextBackbone())
+        modules['transformers'].BertModel = SimpleNamespace(from_pretrained=Mock(return_value=TextBackbone()))
         modules['timm.models.vision_transformer'].Block = lambda **kwargs: torch.nn.Identity()
         with patch.dict(sys.modules, modules), patch('model.net.torch.load', return_value={'model': {}}), patch.object(modules['cn_clip.clip'], 'load_from_name', create=True, return_value=(ClipBackbone(), None)) as loader:
             model = DDIN('unused', 'weights/mae.pt', 'ViT-B-16', num_domains=1, hidden_dim=8).eval()
@@ -462,6 +462,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(result[0].shape, (1, 2))
         self.assertTrue(torch.isfinite(result[0]).all())
         self.assertEqual(loader.call_args.kwargs['device'], 'cpu')
+        self.assertEqual(modules['transformers'].BertModel.from_pretrained.call_args.kwargs['cache_dir'], './model_weights/huggingface')
         self.assertFalse(any(value.requires_grad for value in model.mae.parameters()))
 
 class PartitionTests(unittest.TestCase):

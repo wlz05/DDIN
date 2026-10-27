@@ -16,7 +16,7 @@ import logging
 class BertFNModel(torch.nn.Module):
     def __init__(self, emb_dim, mlp_dims, dropout, dataset):
         super(BertFNModel, self).__init__()
-        self.bert = BertModel.from_pretrained('./pretrained_model/chinese_roberta_wwm_base_ext_pytorch').requires_grad_(False)
+        self.bert = BertModel.from_pretrained('./pretrained_model/chinese_roberta_wwm_base_ext_pytorch', cache_dir='./model_weights/huggingface').requires_grad_(False)
         self.mlp = MLP(emb_dim, mlp_dims, dropout)
         self.attention = MaskAttention(emb_dim)
 

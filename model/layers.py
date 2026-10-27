@@ -2,7 +2,7 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
 import torch
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 import torch.nn.functional as F
 import numpy as np
 import math
@@ -151,7 +151,10 @@ class image_cnn_extractor(nn.Module):
 class image_extractor(torch.nn.Module):
     def __init__(self, out_channels):
         super(image_extractor, self).__init__()
-        self.img_backbone = resnet18(pretrained=True)
+        weights = ResNet18_Weights.IMAGENET1K_V1
+        self.img_backbone = resnet18(weights=None)
+        # Cache the original pretrained weights inside the project.
+        self.img_backbone.load_state_dict(weights.get_state_dict(progress=True, check_hash=True, model_dir='./model_weights/checkpoints'))
         self.img_model = torch.nn.ModuleList([
             self.img_backbone.conv1, self.img_backbone.bn1, self.img_backbone.relu,
             self.img_backbone.layer1, self.img_backbone.layer2, self.img_backbone.layer3, self.img_backbone.layer4

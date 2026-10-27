@@ -289,7 +289,7 @@ def load_model(args, model_without_ddp, optimizer=None, loss_scaler=None):
     if args.resume:
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
-                args.resume, map_location='cpu', check_hash=True)
+                args.resume, model_dir='./model_weights/checkpoints', map_location='cpu', check_hash=True)
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'])

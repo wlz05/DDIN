@@ -92,7 +92,7 @@ class DDIN(nn.Module):
             raise ValueError('Hidden dimension must be a positive multiple of eight; domains must be positive')
         self.dropout = dropout
 
-        self.bert = BertModel.from_pretrained(bert_model_path)
+        self.bert = BertModel.from_pretrained(bert_model_path, cache_dir='./model_weights/huggingface')
 
         self.mae = mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
         checkpoint = torch.load(mae_model_path, map_location='cpu')

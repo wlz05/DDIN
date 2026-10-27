@@ -213,7 +213,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         try:
             logger.info(f"Loading BERT: {self.bert_path}")
-            self.bert = BertModel.from_pretrained(self.bert_path, local_files_only=True)
+            self.bert = BertModel.from_pretrained(self.bert_path, local_files_only=True, cache_dir='./model_weights/huggingface')
             logger.info("BERT loaded.")
             for p in self.bert.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.bert = self.bert.cuda()
