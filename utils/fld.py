@@ -9,6 +9,7 @@ import torch
 import pandas as pd
 import os
 import numpy as np
+from utils.features import binary_labels, read_features, clip_tokens
 
 def _init_fn(worker_id):
     np.random.seed(2024)
@@ -82,7 +83,7 @@ class bert_data():
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")
 
         content = self.data[text_col].to_numpy()
-        label = torch.tensor(self.data[label_col].astype(int).to_numpy())
+        label = binary_labels(self.data[label_col].to_numpy())
 
         fallback_id = self.category_dict.get("Uncategorized", 0) if self.category_dict else 0
         if "category" in self.data.columns and self.category_dict:
@@ -96,27 +97,10 @@ class bert_data():
 
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        try:
-            ordered_image = pickle.load(open(imagepath, "rb"))
-        except Exception as e:
-            raise ValueError(f"[ERROR] Failed to load image pickle {imagepath}: {e}")
-        try:
-            clip_image = pickle.load(open(clipimagepath, "rb"))
-        except Exception as e:
-            raise ValueError(f"[ERROR] Failed to load CLIP image pickle {clipimagepath}: {e}")
+        ordered_image = read_features(imagepath, self.data.index, original_len, metadata=path, require_binding=True)
+        clip_image = read_features(clipimagepath, self.data.index, original_len, metadata=path, require_binding=True)
 
-        try:
-            clip_text = clip.tokenize(list(content))
-        except Exception as e:
-            print(f"[WARNING] CLIP tokenize batch failed: {e}, tokenizing individually...")
-            clip_tokens = []
-            for t in content:
-                try:
-                    ct = clip.tokenize([str(t) if t else " "])
-                    clip_tokens.append(ct[0])
-                except Exception:
-                    clip_tokens.append(torch.zeros(77, dtype=torch.long))
-            clip_text = torch.stack(clip_tokens)
+        clip_text = clip_tokens(content, clip.tokenize)
 
         n_samples = len(token_ids)
         assert ordered_image.size(0) == n_samples, \

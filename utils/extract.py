@@ -5,7 +5,7 @@
 FineFake per-split image preprocessing.
 
 Builds the two image pkls each split needs, aligned row-by-row with the
-split CSVs produced by utils/fsplit.py (FineFake 6:2:2 protocol):
+split CSVs produced by utils/fsplit.py (grouped 60/20/20 targets):
 
   - f_{split}_loader.pkl : MAE-style transformed raw images [N, 3, 224, 224]
                            (same transforms as preproc.py for Weibo)
@@ -22,27 +22,37 @@ Run utils/fsplit.py first.
 """
 
 import torch
+import argparse
+import ntpath
+from pathlib import Path
 import pandas as pd
-import pickle
 import os
 import numpy as np
 from PIL import Image, ImageFile
 from tqdm import tqdm
 from torchvision import transforms
-from cn_clip.clip import load_from_name
+from cn_clip.clip.utils import image_transform
+if __package__:
+    from .features import save_features
+else:
+    from features import save_features
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 ROOT = './FineFake/'
 SPLITS = ['train', 'val', 'test']
 
-def encode_split(split, clip_preprocess, mae_transform):
-    csv_path = os.path.join(ROOT, f'{split}.csv')
+def encode_split(split, clip_preprocess, mae_transform, root=ROOT):
+    if Path(root).is_absolute() or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
+        raise ValueError('Image dataset root must be relative')
+    csv_path = os.path.join(root, f'{split}.csv')
     if not os.path.exists(csv_path):
         raise FileNotFoundError(
             f"[ERROR] Split file not found: {csv_path}. Run utils/fsplit.py first.")
 
     df = pd.read_csv(csv_path)
+    if df.empty:
+        raise ValueError('Image preprocessing requires a nonempty split')
     if 'image_path' not in df.columns:
         df['image_path'] = ""
 
@@ -54,7 +64,7 @@ def encode_split(split, clip_preprocess, mae_transform):
     # Keep both image streams aligned with the CSV rows.
     for _, row in tqdm(df.iterrows(), total=len(df), desc=f"[{split}]"):
         rel = row['image_path']
-        img_path = os.path.join(ROOT, str(rel)) if isinstance(rel, str) and rel.strip() else None
+        img_path = os.path.join(root, str(rel)) if isinstance(rel, str) and rel.strip() else None
 
         img_pil = None
         if img_path is None or not os.path.isfile(img_path):
@@ -76,21 +86,21 @@ def encode_split(split, clip_preprocess, mae_transform):
     clip_tensor = torch.stack(clip_images)
     assert mae_tensor.size(0) == len(df) and clip_tensor.size(0) == len(df)
 
-    loader_path = os.path.join(ROOT, f'f_{split}_loader.pkl')
-    clip_path = os.path.join(ROOT, f'f_{split}_clip.pkl')
-    with open(loader_path, 'wb') as f:
-        pickle.dump(mae_tensor, f)
-    with open(clip_path, 'wb') as f:
-        pickle.dump(clip_tensor, f)
+    loader_path = os.path.join(root, f'f_{split}_loader.pkl')
+    clip_path = os.path.join(root, f'f_{split}_clip.pkl')
+    # Bind both image streams to the exact split metadata.
+    save_features(loader_path, mae_tensor, csv_path)
+    save_features(clip_path, clip_tensor, csv_path)
 
     print(f"[{split}] {len(df)} rows -> {loader_path} {tuple(mae_tensor.shape)}, "
           f"{clip_path} {tuple(clip_tensor.shape)} "
           f"(missing: {missing_count}, corrupted: {corrupted_count})")
 
 if __name__ == '__main__':
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[INFO] Loading CLIP preprocessor on {device}...")
-    _, clip_preprocess = load_from_name("ViT-B-16", device=device, download_root='./model_weights/clip_cn/')
+    parser = argparse.ArgumentParser(description='Build FineFake image caches bound to split metadata')
+    parser.add_argument('--root', default=ROOT)
+    args = parser.parse_args()
+    clip_preprocess = image_transform(224)
 
     mae_transform = transforms.Compose([
         transforms.Resize(256),
@@ -100,7 +110,7 @@ if __name__ == '__main__':
     ])
 
     for split in SPLITS:
-        encode_split(split, clip_preprocess, mae_transform)
+        encode_split(split, clip_preprocess, mae_transform, args.root)
 
     print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
 

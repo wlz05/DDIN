@@ -4,6 +4,7 @@
 import torch
 from sklearn.metrics import recall_score, precision_score, f1_score, accuracy_score, roc_auc_score
 import numpy as np
+from copy import deepcopy
 def batch2dict(batch):
     """Convert a list batch into the named dict the trainers expect (CPU-safe).
 
@@ -58,114 +59,71 @@ class Averager():
         return self.v
 
 def metricsTrueFalse(y_true, y_pred, category, category_dict):
-    y_GT = y_true
-    metricsTrueFalse = metrics(y_true, y_pred, category, category_dict)
-    fake = {}
-    real = {}
-    THRESH = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
-    realnews_TP, realnews_TN, realnews_FP, realnews_FN = [0]*9, [0]*9, [0]*9, [0]*9
-    fakenews_TP, fakenews_TN, fakenews_FP, fakenews_FN = [0]*9, [0]*9, [0]*9, [0]*9
-    realnews_sum, fakenews_sum = [0] * 9, [0] * 9
-    for thresh_idx, thresh in enumerate(THRESH):
-        y_pred_thresh = y_pred.copy()
-        for i in range(len(y_pred_thresh)):
-            if y_pred_thresh[i]< thresh: y_pred_thresh[i]=0
-            else: y_pred_thresh[i]=1
-        for idx in range(len(y_pred_thresh)):
-            if y_GT[idx] == 1:
-                fakenews_sum[thresh_idx] += 1
-                if y_pred_thresh[idx] == 0:
-                    fakenews_FN[thresh_idx] += 1
-                    realnews_FP[thresh_idx] += 1
-                else:
-                    fakenews_TP[thresh_idx] += 1
-                    realnews_TN[thresh_idx] += 1
-            else:
-                realnews_sum[thresh_idx] += 1
-                if y_pred_thresh[idx] == 1:
-                    realnews_FN[thresh_idx] += 1
-                    fakenews_FP[thresh_idx] += 1
-                else:
-                    realnews_TP[thresh_idx] += 1
-                    fakenews_TN[thresh_idx] += 1
+    result = metrics(y_true, y_pred, category, category_dict)
+    labels, probabilities, _, _ = metric_inputs(y_true, y_pred, category, category_dict)
+    predictions = (probabilities >= 0.5).astype(int)
+    for name, positive in (('real', 0), ('fake', 1)):
+        truth, predicted = labels == positive, predictions == positive
+        tp = int(np.sum(truth & predicted))
+        precision = tp / max(int(predicted.sum()), 1)
+        recall = tp / max(int(truth.sum()), 1)
+        total = precision + recall
+        result[name] = {'precision': precision, 'recall': recall, 'F1': 2 * precision * recall / total if total else 0.0}
+    return result
 
-    val_accuracy, real_accuracy, fake_accuracy, real_precision, fake_precision = [0] * 9, [0] * 9, [0] * 9, [0] * 9, [0] * 9
-    real_recall, fake_recall, real_F1, fake_F1 = [0] * 9, [0] * 9, [0] * 9, [0] * 9
-    for thresh_idx, _ in enumerate(THRESH):
-        val_accuracy[thresh_idx] = (realnews_TP[thresh_idx]+realnews_TN[thresh_idx])/(realnews_TP[thresh_idx]+realnews_TN[thresh_idx]+realnews_FP[thresh_idx]+realnews_FN[thresh_idx])
-        real_accuracy[thresh_idx] = (realnews_TP[thresh_idx])/max(1, realnews_sum[thresh_idx])
-        fake_accuracy[thresh_idx] = (fakenews_TP[thresh_idx])/max(1, fakenews_sum[thresh_idx])
-        real_precision[thresh_idx] = realnews_TP[thresh_idx]/max(1,(realnews_TP[thresh_idx]+realnews_FP[thresh_idx]))
-        fake_precision[thresh_idx] = fakenews_TP[thresh_idx] / max(1,(fakenews_TP[thresh_idx] + fakenews_FP[thresh_idx]))
-        real_recall[thresh_idx] = realnews_TP[thresh_idx]/max(1,(realnews_TP[thresh_idx]+realnews_FN[thresh_idx]))
-        fake_recall[thresh_idx] = fakenews_TP[thresh_idx] / max(1,(fakenews_TP[thresh_idx] + fakenews_FN[thresh_idx]))
-        real_F1[thresh_idx] = 2*(real_recall[thresh_idx]*real_precision[thresh_idx])/max(1,(real_recall[thresh_idx]+real_precision[thresh_idx]))
-        fake_F1[thresh_idx] = 2 * (fake_recall[thresh_idx] * fake_precision[thresh_idx]) / max(1,(fake_recall[thresh_idx] + fake_precision[thresh_idx]))
-    fake['precision'] =fake_precision[0]
-    fake['recall'] =fake_recall[0]
-    fake['F1'] =fake_F1[0]
-    real['precision'] =real_precision[0]
-    real['recall'] =real_recall[0]
-    real['F1'] =real_F1[0]
-    metricsTrueFalse['real']=real
-    metricsTrueFalse['fake'] = fake
-    return metricsTrueFalse
+def metric_inputs(y_true, y_pred, category=None, category_dict=None):
+    labels, probabilities = np.asarray(y_true), np.asarray(y_pred)
+    if labels.ndim != 1 or probabilities.shape != labels.shape or not labels.size:
+        raise ValueError('Metrics require equally sized nonempty vectors')
+    for values in (labels, probabilities):
+        if values.dtype.kind not in 'biuf' or not np.isfinite(values).all():
+            raise ValueError('Metrics require finite numeric inputs')
+    if not np.isin(labels, (0, 1)).all() or np.any((probabilities < 0) | (probabilities > 1)):
+        raise ValueError('Metrics require binary labels and probabilities in [0, 1]')
+    if category is None:
+        groups, mapping = np.zeros(len(labels), dtype=int), {'all': 0}
+    else:
+        groups = np.asarray(category)
+        if groups.shape != labels.shape or groups.dtype.kind not in 'iu':
+            raise ValueError('Categories require an integer ID for every sample')
+        mapping = dict(category_dict) if category_dict else {str(value): int(value) for value in np.unique(groups)}
+        values = list(mapping.values())
+        if any(isinstance(value, bool) or not isinstance(value, (int, np.integer)) for value in values):
+            raise ValueError('Category IDs must be integers')
+        if len(set(values)) != len(values) or not np.isin(groups, values).all():
+            raise ValueError('Category IDs must be unique and cover every sample')
+    return labels.astype(int), probabilities.astype(float), groups, mapping
 
 def metrics(y_true, y_pred, category, category_dict):
-    res_by_category = {}
-    metrics_by_category = {}
-    reverse_category_dict = {}
-    for k, v in category_dict.items():
-        reverse_category_dict[v] = k
-        res_by_category[k] = {"y_true": [], "y_pred": []}
-
-    for i, c in enumerate(category):
-        c = reverse_category_dict[c]
-        res_by_category[c]['y_true'].append(y_true[i])
-        res_by_category[c]['y_pred'].append(y_pred[i])
-
-    for c, res in res_by_category.items():
-        try:
-            metrics_by_category[c] = {
-                'auc': round(roc_auc_score(res['y_true'], res['y_pred']), 4)
-            }
-        except ValueError:
-            pass
-
-    try:
-        metrics_by_category['auc'] = roc_auc_score(y_true, y_pred, average='macro')
-    except ValueError:
-        pass
-    y_pred = np.around(np.array(y_pred)).astype(int)
-    metrics_by_category['metric'] = f1_score(y_true, y_pred, average='macro')
-    metrics_by_category['recall'] = recall_score(y_true, y_pred, average='macro')
-    metrics_by_category['precision'] = precision_score(y_true, y_pred, average='macro')
-    metrics_by_category['acc'] = accuracy_score(y_true, y_pred)
-
-    for c, res in res_by_category.items():
-        if len(res['y_true']) == 0:
+    labels, probabilities, groups, mapping = metric_inputs(y_true, y_pred, category, category_dict)
+    # Use the same threshold for aggregate and class-specific metrics.
+    predictions = (probabilities >= 0.5).astype(int)
+    result = {'metric': float(f1_score(labels, predictions, average='macro', zero_division=0)),
+              'recall': float(recall_score(labels, predictions, average='macro', zero_division=0)),
+              'precision': float(precision_score(labels, predictions, average='macro', zero_division=0)),
+              'acc': float(accuracy_score(labels, predictions)),
+              'auc': float(roc_auc_score(labels, probabilities)) if len(np.unique(labels)) == 2 else None}
+    for name, group in mapping.items():
+        mask = groups == group
+        if not mask.any():
             continue
-        metrics_by_category[c] = {
-            'precision': round(precision_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                         average='macro'), 4),
-            'recall': round(recall_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int),
-                                   average='macro'), 4),
-            'fscore': round(f1_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int), average='macro'), 4),
-
-            'acc': round(accuracy_score(res['y_true'], np.around(np.array(res['y_pred'])).astype(int)), 4)
-        }
-    return metrics_by_category
+        truth, predicted, scores = labels[mask], predictions[mask], probabilities[mask]
+        # Preserve AUC alongside the category classification metrics.
+        result[name] = {'auc': round(float(roc_auc_score(truth, scores)), 4) if len(np.unique(truth)) == 2 else None,
+                        'precision': round(float(precision_score(truth, predicted, average='macro', zero_division=0)), 4),
+                        'recall': round(float(recall_score(truth, predicted, average='macro', zero_division=0)), 4),
+                        'fscore': round(float(f1_score(truth, predicted, average='macro', zero_division=0)), 4),
+                        'acc': round(float(accuracy_score(truth, predicted)), 4)}
+    return result
 
 def calculate_metrics(y_true, y_pred, category=None, category_dict=None):
-    if category is None:
-        category = [0] * len(y_true)
-    if category_dict is None:
-        category_dict = {}
     return metrics(y_true, y_pred, category, category_dict)
 
 class Recorder():
 
     def __init__(self, early_step):
+        if type(early_step) is not int or early_step < 1:
+            raise ValueError('Early stopping patience must be a positive integer')
         self.max = {'metric': 0}
         self.cur = {'metric': 0}
         self.maxindex = 0
@@ -173,14 +131,17 @@ class Recorder():
         self.early_step = early_step
 
     def add(self, x):
-        self.cur = x
+        if not isinstance(x, dict) or not isinstance(x.get('metric'), (int, float, np.number)) or isinstance(x['metric'], bool) or not np.isfinite(x['metric']) or not 0 <= x['metric'] <= 1:
+            raise ValueError('Validation metric must be finite and lie in [0, 1]')
+        self.cur = deepcopy(x)
         self.curindex += 1
         print("curent", self.cur)
         return self.judge()
 
     def judge(self):
-        if self.cur['metric'] > self.max['metric']:
-            self.max = self.cur
+        # Save the first valid epoch even when its F1 is zero.
+        if self.maxindex == 0 or self.cur['metric'] > self.max['metric']:
+            self.max = deepcopy(self.cur)
             self.maxindex = self.curindex
             self.showfinal()
             return 'save'

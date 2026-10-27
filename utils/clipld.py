@@ -10,6 +10,7 @@ import pandas as pd
 from torchvision import datasets, models, transforms
 import os
 import numpy as np
+from utils.features import binary_labels, read_features, clip_tokens
 from PIL import Image
 
 def read_image():
@@ -132,33 +133,15 @@ class bert_data():
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")
 
         content = self.data['content'].to_numpy()
-        label = torch.tensor(self.data['label'].astype(int).to_numpy())
+        label = binary_labels(self.data['label'].to_numpy())
         category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
 
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        try:
-            ordered_image = pickle.load(open(imagepath, 'rb'))
-        except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
-            raise ValueError(f"[ERROR] Failed to load image pickle {imagepath}: {e}")
+        ordered_image = read_features(imagepath, self.data.index, original_len, metadata=path)
+        clip_image = read_features(clipimagepath, self.data.index, original_len, metadata=path)
 
-        try:
-            clip_image = pickle.load(open(clipimagepath, 'rb'))
-        except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
-            raise ValueError(f"[ERROR] Failed to load CLIP image pickle {clipimagepath}: {e}")
-
-        try:
-            clip_text = clip.tokenize(list(content))
-        except Exception as e:
-            print(f"[WARNING] CLIP tokenize batch failed: {e}, tokenizing individually...")
-            clip_tokens = []
-            for i, t in enumerate(content):
-                try:
-                    ct = clip.tokenize([str(t) if t else " "])
-                    clip_tokens.append(ct[0])
-                except Exception:
-                    clip_tokens.append(torch.zeros(77, dtype=torch.long))  # CLIP max context length
-            clip_text = torch.stack(clip_tokens)
+        clip_text = clip_tokens(content, clip.tokenize)
 
         n_samples = len(token_ids)
         assert ordered_image.size(0) == n_samples, \

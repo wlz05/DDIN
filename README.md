@@ -10,24 +10,24 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 
 ```
 ┌──────────────────────────────────────────────────────────
-│                   DDIN Architecture                     
+│                   DDIN Architecture
 ├──────────────────────────────────────────────────────────
-│  (a) Dual-Stream Multi-Granularity Feature Extraction    
-│      BERT (text local) + MAE (image local)               
-│      + CLIP (text-image global)                          
-│                         ↓                                
-│  (b) Multi-Scale Semantic Projection                     
-│                         ↓                                
-│  (c) Multi-Granularity Cross-Modal Inconsistency Mining  
-│      ├── Global-Global Inconsistency                     
-│      ├── Global-Local Inconsistency     
-│      └── Local-Local Inconsistency (Cross-Attention)                      
-│                         ↓                                
-│  (d) Hierarchical Conflict Synergy Network               
-│                         ↓                                
-│  (e) Domain-Adaptive Inconsistency Weighting              
-│                         ↓                                
-│  (f) Multimodal Global Fusion → Classifier               
+│  (a) Dual-Stream Multi-Granularity Feature Extraction
+│      BERT (text local) + MAE (image local)
+│      + CLIP (text-image global)
+│                         ↓
+│  (b) Multi-Scale Semantic Projection
+│                         ↓
+│  (c) Multi-Granularity Cross-Modal Inconsistency Mining
+│      ├── Global-Global Inconsistency
+│      ├── Global-Local Inconsistency
+│      └── Local-Local Inconsistency (Cross-Attention)
+│                         ↓
+│  (d) Hierarchical Conflict Synergy Network
+│                         ↓
+│  (e) Domain-Adaptive Inconsistency Weighting
+│                         ↓
+│  (f) Multimodal Global Fusion → Classifier
 └──────────────────────────────────────────────────────────
 ```
 
@@ -47,6 +47,7 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 DDIN/
 ├── model/
 │   ├── net.py                 # DDIN core model (BERT+MAE+CLIP) + Trainer (FGM, EMA, warmup-cosine)
+│   ├── training.py            # Training state restoration, scheduling, and atomic checkpoints
 │   ├── layers.py              # Base layers (MLP families, Attention, cnn_extractor, FocalLoss, SupConLoss, classifier)
 │   ├── clip.py                # CLIP-based MoE domain model variant (MultiDomainPLEFENDModel + Trainer)
 │   ├── raw.py                 # Raw DDIN model variant (domain-specific MoE experts, AdaIN)
@@ -72,8 +73,10 @@ DDIN/
 │   ├── social.py              # Weibo21 CLIP-MAE data loader (xlsx → TensorDataset)
 │   ├── fld.py                 # FineFake CLIP-MAE data loader (CSV → TensorDataset)
 │   ├── utils.py               # Metrics (AUC, precision/recall/F1), Recorder, clipdata2gpu, data2gpu
+│   ├── features.py            # Binary labels, bound image caches, and CLIP token fallback
+│   ├── partition.py           # Connected sample groups and mandatory split leakage checks
 │   ├── extract.py             # FineFake per-split MAE/CLIP image preprocessing (generates pkl files)
-│   ├── fsplit.py              # FineFake official-protocol split (6:2:2, seed 3407, stratified)
+│   ├── fsplit.py              # FineFake grouped split (60/20/20 targets, seed 3407)
 │   ├── audit.py               # Split/leakage audit for all three datasets
 │   ├── fiximg.py              # Legacy image pkl fix utility (superseded by extract.py)
 │   ├── datasets.py            # Dataset transforms (timm-based train/val augmentation)
@@ -83,6 +86,8 @@ DDIN/
 │   ├── sched.py               # Cosine LR scheduler with linear warmup
 │   ├── misc.py                # Distributed training utils, SmoothedValue, MetricLogger, NativeScaler
 │   └── pos.py                 # Positional encoding (sinusoidal + learnable, 1D/2D)
+├── verify/
+│   └── boundary.py            # Metrics, training failures, cached images, and CLI regression tests
 ├── data/                      # Weibo dataset (CSV + generated pkls)
 │   ├── train_origin.csv
 │   ├── val_origin.csv
@@ -225,7 +230,7 @@ python preproc.py && python clipprep.py
 # Weibo21 -> weibo21/
 python prepare.py && python encode.py
 
-# FineFake -> FineFake/  (1: official-protocol split, 2: per-split image pkls)
+# FineFake -> FineFake/  (1: grouped split, 2: bound image caches)
 python utils/fsplit.py && python utils/extract.py
 ```
 
@@ -285,9 +290,9 @@ DDIN uses Weibo, Weibo21, and FineFake for multimodal fake news detection. The l
 |---------|--------------|-------|
 | [Weibo](https://github.com/yaqingwang/EANN-KDD18) | Weibo benchmark with prepared train/validation/test CSV annotations | `data/train_origin.csv`, `val_origin.csv`, `test_origin.csv` |
 | [Weibo21](https://github.com/kennqiang/MDFEND-Weibo21) | MDFEND-Weibo21 release with prepared train/validation/test Excel annotations | `weibo21/train_datasets.xlsx`, `val_datasets.xlsx`, `test_datasets.xlsx` |
-| [FineFake](https://github.com/Accuser907/FineFake) | Label-stratified **60/20/20** split generated by `utils/fsplit.py`, with partition seed 3407 | `FineFake/train.csv`, `val.csv`, `test.csv` |
+| [FineFake](https://github.com/Accuser907/FineFake) | Connected text/image/source groups with **60/20/20 target ratios**, label balancing, and partition seed 3407 | `FineFake/train.csv`, `val.csv`, `test.csv` |
 
-Validation controls early stopping; the test split is used for final evaluation. Run `python utils/audit.py` to check overlap across partitions.
+Validation controls early stopping; the test split is used for final evaluation. Training audits normalized text, image identifiers, available image-file hashes, and original-source IDs before loading model backbones. Cross-split overlap stops the run. Official Weibo and Weibo21 files are audited without repartitioning. FineFake groups stay intact, so achieved ratios follow group sizes rather than an exact row-level split. Run `python -B utils/audit.py --dataset finefake` to inspect the selected dataset.
 
 Weibo and Weibo21 use **1 = fake, 0 = real**. FineFake retains the released binary labels: **0 = fake, 1 = real**.
 
@@ -336,24 +341,23 @@ Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized
 ```
 FineFake/
 ├── FineFake.pkl                    # Official full data (text + image_path + label + topic, no splits)
-├── train.csv                       # 60% (generated by utils/fsplit.py, 6:2:2 protocol)
-├── val.csv                         # 20% (disjoint from train and test)
-├── test.csv                        # 20% (disjoint from train and val)
-├── f_train_loader.pkl              # MAE-branch images [N,3,224,224] (from utils/extract.py)
+├── train.csv                       # 60% target (connected groups, seed 3407)
+├── val.csv                         # 20% target (disjoint from train and test)
+├── test.csv                        # 20% target (disjoint from train and val)
+├── f_train_loader.pkl              # MAE images [N,3,224,224] with split metadata hash
 ├── f_val_loader.pkl
 ├── f_test_loader.pkl
-├── f_train_clip.pkl                # CLIP-preprocessed images [N,3,224,224]
+├── f_train_clip.pkl                # CLIP images [N,3,224,224] with split metadata hash
 ├── f_val_clip.pkl
 └── f_test_clip.pkl
 ```
 
 **Build FineFake splits + image pkls:**
 ```bash
-python utils/fsplit.py     # FineFake.pkl -> train/val/test.csv (6:2:2, seed 3407, stratified)
+python utils/fsplit.py     # FineFake.pkl -> grouped train/val/test.csv (60/20/20 targets, seed 3407)
 python utils/extract.py    # csvs -> aligned per-split MAE/CLIP image pkls
 ```
-Both pkls hold raw preprocessed images (same format as Weibo/Weibo21); BERT/MAE/CLIP
-encoding happens inside the model at training time.
+Each FineFake pickle stores raw preprocessed images and the SHA-256 of its split CSV. The loader rejects a cache created for different metadata. Rebuild both image caches after changing or regenerating the split files. BERT/MAE/CLIP encoding happens inside the model at training time. Image preprocessing uses the [Chinese-CLIP transform](https://github.com/OFA-Sys/Chinese-CLIP/blob/master/cn_clip/clip/utils.py).
 
 ### Dataset Category Mapping
 
@@ -381,6 +385,18 @@ encoding happens inside the model at training time.
 | **Early Stopping** | Training halts when validation performance stops improving for N epochs |
 
 ---
+
+## Tests
+
+```bash
+python -B -m unittest verify.boundary -v
+```
+
+The regression suite covers metric edge cases, missing text and image-cache alignment, CLIP token fallback, single-epoch training, FGM/EMA restoration, checkpoint write failures, and command-line validation. Small tensor fixtures exercise the training loop and model dimensions without downloading pretrained backbones. Partition tests cover transitive grouping, normalized duplicate text, copied image content, stale caches, and audit failure before model loading.
+
+Custom dataset roots use relative paths through `main.py --root_path`, `utils/fsplit.py --root`, and `utils/extract.py --root`.
+
+Image caches follow the original metadata row order. When text filtering removes rows, the loaders select the corresponding cached images. CLIP fallback text uses the tokenizer's context length. Checkpoints are replaced after a complete write, and the first valid validation epoch is saved even when F1 is zero.
 
 ## License
 

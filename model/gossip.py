@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
+from model.training import save_state
 import tqdm
 import torch
 from transformers import BertModel
@@ -535,17 +536,18 @@ class Trainer():
 
                 current_metric_val = val_results.get(self.metric_key_for_early_stop, 0.0)
                 acc_val = val_results.get('acc', 0.0)
-                f1_val = val_results.get('F1', 0.0)
-                auc_val = val_results.get('auc', 0.0)
+                f1_val = val_results.get('metric', 0.0)
+                auc_val = val_results.get('auc')
+                auc_text = 'unavailable' if auc_val is None else f'{auc_val:.4f}'
 
                 logger.info(
-                    f"Val E{epoch + 1}: Acc:{acc_val:.4f} F1:{f1_val:.4f} AUC:{auc_val:.4f} Tracked({self.metric_key_for_early_stop}):{current_metric_val:.4f}")
+                    f"Val E{epoch + 1}: Acc:{acc_val:.4f} F1:{f1_val:.4f} AUC:{auc_text} Tracked({self.metric_key_for_early_stop}):{current_metric_val:.4f}")
                 logger.info(f"  Real:{repr(val_results.get('real', {}))}, Fake:{repr(val_results.get('fake', {}))}")
 
                 mark = recorder.add(val_results)  # recorder.add should handle empty val_results if designed to
                 if mark == 'save':
                     save_p = os.path.join(self.save_param_dir, 'best_model.pth')
-                    torch.save(self.model.state_dict(), save_p)
+                    save_state(self.model, save_p)
                     logger.info(f"Best model saved based on '{self.metric_key_for_early_stop}': {save_p}")
                 elif mark == 'esc':
                     logger.info(f"Early stopping triggered based on '{self.metric_key_for_early_stop}'.")
@@ -562,7 +564,7 @@ class Trainer():
         if os.path.exists(best_model_path):
             logger.info(f"Loading best model for final test: {best_model_path}")
             try:
-                self.model.load_state_dict(torch.load(best_model_path, map_location=lambda storage, loc: storage))
+                self.model.load_state_dict(torch.load(best_model_path, map_location='cpu', weights_only=True))
                 loaded_best = True
             except Exception as e:
                 logger.error(f"Failed to load best model state_dict: {e}. Using model state from end of training.")
@@ -572,7 +574,7 @@ class Trainer():
             logger.warning(
                 f"Best model not loaded. Testing with model state from end of training. Saving this state to: {final_model_to_test_path}")
             try:
-                torch.save(self.model.state_dict(), final_model_to_test_path)
+                save_state(self.model, final_model_to_test_path)
             except Exception as es:
                 logger.error(f"Failed to save final training state model: {es}")
 
@@ -586,25 +588,16 @@ class Trainer():
                 final_results = self.test(self.test_loader)  # Call test, returns dict with detailed metrics
                 if final_results:
                     acc = final_results.get('acc', 0.0);
-                    f1 = final_results.get('F1', 0.0);
-                    auc = final_results.get('auc', 0.0)
+                    f1 = final_results.get('metric', 0.0);
+                    auc = final_results.get('auc')
+                    auc_text = 'unavailable' if auc is None else f'{auc:.4f}'
                     precision = final_results.get('precision', 0.0);
                     recall = final_results.get('recall', 0.0)
                     logger.info(
-                        f"Final Test Results: Acc:{acc:.4f} F1:{f1:.4f} AUC:{auc:.4f} Precision:{precision:.4f} Recall:{recall:.4f}")
+                        f"Final Test Results: Acc:{acc:.4f} F1:{f1:.4f} AUC:{auc_text} Precision:{precision:.4f} Recall:{recall:.4f}")
 
-                    real_m = final_results.get('Real', {})  # Get 'Real' sub-dict from results
-                    fake_m = final_results.get('Fake', {})  # Get 'Fake' sub-dict from results
-
-                    log_final_class_summary = (
-                        f"  Real (label=1): P:{real_m.get('precision', 0.0):.4f} "
-                        f"R:{real_m.get('recall', 0.0):.4f} "
-                        f"F1:{real_m.get('F1', 0.0):.4f} | "
-                        f"Fake (label=0): P:{fake_m.get('precision', 0.0):.4f} "
-                        f"R:{fake_m.get('recall', 0.0):.4f} "
-                        f"F1:{fake_m.get('F1', 0.0):.4f}"
-                    )
-                    logger.info(log_final_class_summary)  # Print detailed class metrics
+                    domain_results = {name: final_results[name] for name in self.category_dict if name in final_results}
+                    logger.info(f"Per-domain results: {domain_results}")
 
                 else:
                     logger.error("Final test did not return valid results.")

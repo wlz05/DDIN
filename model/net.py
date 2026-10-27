@@ -4,98 +4,12 @@
 import os
 import tqdm
 import torch
-from positional_encodings.torch_encodings import PositionalEncoding1D, PositionalEncoding2D, PositionalEncodingPermute3D
-from transformers import BertModel
 import torch.nn as nn
-import mae
 from utils.utils import data2gpu, Averager, metrics, Recorder, clipdata2gpu, batch2dict
 from utils.utils import metricsTrueFalse
-from .layers import *
-from .pivot import *
-from timm.models.vision_transformer import Block
-import cn_clip.clip as clip
-from cn_clip.clip import load_from_name, available_models
-from copy import deepcopy
 import math
-
-class FGM():
-    def __init__(self, model, epsilon=0.5):
-        self.model = model
-        self.epsilon = epsilon
-        self.backup = {}
-
-    def attack(self, emb_name='bert.embeddings.word_embeddings.weight'):
-        # Perturb trainable embeddings along normalized gradients.
-        for name, param in self.model.named_parameters():
-            if param.requires_grad and emb_name in name:
-                self.backup[name] = param.data.clone()
-                norm = torch.norm(param.grad)
-                if norm != 0 and not torch.isnan(norm):
-                    r_at = self.epsilon * param.grad / norm
-                    param.data.add_(r_at)
-
-    def restore(self, emb_name='bert.embeddings.word_embeddings.weight'):
-        for name, param in self.model.named_parameters():
-            if param.requires_grad and emb_name in name:
-                assert name in self.backup
-                param.data = self.backup[name]
-        self.backup = {}
-
-class EMA():
-    def __init__(self, model, decay=0.999):
-        self.model = model
-        self.decay = decay
-        self.shadow = {}
-        self.backup = {}
-        self.register()
-
-    def register(self):
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                self.shadow[name] = param.data.clone()
-
-    def update(self):
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                assert name in self.shadow
-                new_average = self.decay * self.shadow[name] + (1.0 - self.decay) * param.data
-                self.shadow[name] = new_average.clone()
-
-    def apply_shadow(self):
-        # Swap in averaged weights for evaluation.
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                assert name in self.shadow
-                self.backup[name] = param.data.clone()
-                param.data = self.shadow[name]
-
-    def restore(self):
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                assert name in self.backup
-                param.data = self.backup[name]
-        self.backup = {}
-
-class WarmupCosineAnnealingLR:
-    def __init__(self, optimizer, warmup_epochs, max_epochs, eta_min=0):
-        self.optimizer = optimizer
-        self.warmup_epochs = warmup_epochs
-        self.max_epochs = max_epochs
-        self.eta_min = eta_min
-        self.base_lrs = [group['lr'] for group in optimizer.param_groups]
-        self.current_epoch = 0
-
-    def step(self):
-        self.current_epoch += 1
-        if self.current_epoch <= self.warmup_epochs:
-            for i, param_group in enumerate(self.optimizer.param_groups):
-                lr = self.base_lrs[i] * (self.current_epoch / self.warmup_epochs)
-                param_group['lr'] = lr
-        else:
-            for i, param_group in enumerate(self.optimizer.param_groups):
-                progress = (self.current_epoch - self.warmup_epochs) / (self.max_epochs - self.warmup_epochs)
-                lr = self.eta_min + (self.base_lrs[i] - self.eta_min) * 0.5 * (1 + math.cos(math.pi * progress))
-                param_group['lr'] = lr
+from contextlib import nullcontext
+from .training import FGM, EMA, WarmupCosineAnnealingLR, save_state
 
 class MultiScaleSemanticProjection(nn.Module):
     """Multi-scale semantic projection layer - captures polysemy through
@@ -124,6 +38,7 @@ class HierarchicalConflictSynergy(nn.Module):
 
     def __init__(self, hidden_dim, num_heads=4):
         super(HierarchicalConflictSynergy, self).__init__()
+        from timm.models.vision_transformer import Block
         self.transformer_block = Block(
             dim=hidden_dim,
             num_heads=num_heads,
@@ -168,6 +83,13 @@ class DDIN(nn.Module):
     def __init__(self, bert_model_path, mae_model_path, clip_model_name,
                  num_domains=9, hidden_dim=768, num_classes=2, dropout=0.2):
         super(DDIN, self).__init__()
+        # Load optional backbone dependencies only when constructing the model.
+        import mae
+        from transformers import BertModel
+        from timm.models.vision_transformer import Block
+        from cn_clip.clip import load_from_name
+        if type(hidden_dim) is not int or hidden_dim < 8 or hidden_dim % 8 or type(num_domains) is not int or num_domains < 1:
+            raise ValueError('Hidden dimension must be a positive multiple of eight; domains must be positive')
         self.dropout = dropout
 
         self.bert = BertModel.from_pretrained(bert_model_path)
@@ -175,8 +97,10 @@ class DDIN(nn.Module):
         self.mae = mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
         checkpoint = torch.load(mae_model_path, map_location='cpu')
         self.mae.load_state_dict(checkpoint['model'], strict=False)
+        # Exclude the no-gradient backbone from optimizer and EMA state.
+        self.mae.requires_grad_(False)
 
-        self.clip_model, _ = load_from_name(clip_model_name, download_root='./model_weights/clip_cn/')
+        self.clip_model, _ = load_from_name(clip_model_name, device='cpu', download_root='./model_weights/clip_cn/')
 
         self.text_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.image_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
@@ -191,6 +115,8 @@ class DDIN(nn.Module):
         )
 
         self.ll_cross_attn = nn.MultiheadAttention(hidden_dim, num_heads=8, batch_first=True)
+        self.text_attention_proj = nn.Identity() if hidden_dim == 768 else nn.Linear(768, hidden_dim)
+        self.image_attention_proj = nn.Identity() if hidden_dim == 768 else nn.Linear(768, hidden_dim)
         self.ll_inconsistency = nn.Sequential(
             nn.Conv1d(2, hidden_dim, kernel_size=1),
             nn.ReLU(),
@@ -238,8 +164,9 @@ class DDIN(nn.Module):
 
         text_local_proj = self.text_local_proj(text_local.mean(dim=1))  # [B, D]
         image_local_proj = self.image_local_proj(image_local.mean(dim=1))  # [B, D]
-        text_global_proj = self.text_global_proj(text_global)  # [B, D]
-        image_global_proj = self.image_global_proj(image_global)  # [B, D]
+        # Match pretrained embedding precision to the trainable projections.
+        text_global_proj = self.text_global_proj(text_global.to(self.text_global_proj.fusion.weight.dtype))
+        image_global_proj = self.image_global_proj(image_global.to(self.image_global_proj.fusion.weight.dtype))
 
         gg_concat = torch.cat([
             text_global_proj,
@@ -249,7 +176,7 @@ class DDIN(nn.Module):
         conflict_gg = self.gg_inconsistency(gg_concat)  # [B, D]
 
         _, attn_weights = self.ll_cross_attn(
-            text_local, image_local, image_local
+            self.text_attention_proj(text_local), self.image_attention_proj(image_local), self.image_attention_proj(image_local)
         )
         row_max = attn_weights.max(dim=-1)[0]  # [B, L]
         col_max = attn_weights.max(dim=-2)[0]  # [B, P]
@@ -289,9 +216,15 @@ class AdaptiveContrastiveLoss(nn.Module):
 
     def __init__(self, temperature=0.07):
         super(AdaptiveContrastiveLoss, self).__init__()
+        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)) or not math.isfinite(temperature) or temperature <= 0:
+            raise ValueError('Contrastive temperature must be finite and positive')
         self.temperature = temperature
 
     def forward(self, text_features, image_features, labels):
+        if text_features.ndim != 2 or text_features.shape != image_features.shape or min(text_features.shape) < 1 or labels.numel() != len(text_features):
+            raise ValueError('Contrastive features and labels must have matching nonempty batches')
+        if not torch.isfinite(text_features).all() or not torch.isfinite(image_features).all():
+            raise ValueError('Contrastive features must be finite')
         text_features = nn.functional.normalize(text_features, dim=-1)
         image_features = nn.functional.normalize(image_features, dim=-1)
 
@@ -317,7 +250,13 @@ class Trainer():
                  clip_model_name='ViT-B-16',
                  use_fgm=True, use_ema=True,
                  contrastive_weight=0.1, logger=None):
-
+        if type(epoches) is not int or epoches < 1 or type(early_stop) is not int or early_stop < 1:
+            raise ValueError('Epochs and early stopping patience must be positive integers')
+        if not math.isfinite(lr) or lr <= 0 or not math.isfinite(contrastive_weight) or contrastive_weight < 0:
+            raise ValueError('Learning rate and contrastive weight must be finite and valid')
+        for name, loader in (('train', train_loader), ('validation', val_loader), ('test', test_loader)):
+            if loader is None or len(loader) == 0:
+                raise ValueError('The ' + name + ' loader must contain at least one batch')
         self.lr = lr
         self.weight_decay = weight_decay
         self.train_loader = train_loader
@@ -351,9 +290,9 @@ class Trainer():
         self.criterion = nn.CrossEntropyLoss()
         self.contrastive_loss = AdaptiveContrastiveLoss()
 
-        bert_params = list(self.model.bert.parameters())
+        bert_params = [param for param in self.model.bert.parameters() if param.requires_grad]
         other_params = [p for n, p in self.model.named_parameters()
-                        if 'bert' not in n]
+                        if 'bert' not in n and p.requires_grad]
 
         self.optimizer = torch.optim.AdamW([
             {'params': bert_params, 'lr': lr * 0.1},
@@ -362,9 +301,9 @@ class Trainer():
 
         self.scheduler = WarmupCosineAnnealingLR(
             self.optimizer,
-            warmup_epochs=3,
+            warmup_epochs=min(3, epoches),
             max_epochs=epoches,
-            eta_min=1e-6
+            eta_min=min(1e-6, lr * 0.1)
         )
 
     def train(self, logger=None):
@@ -407,28 +346,30 @@ class Trainer():
                 batch_adaptive_weight = torch.tensor([self.contrastive_weight]).to(batch_label.device)
 
                 loss = cls_loss + batch_adaptive_weight * adaptive_con_loss
+                if not torch.isfinite(loss).all():
+                    raise FloatingPointError('Training loss is nonfinite')
                 loss.backward()
 
                 if self.use_fgm and fgm:
                     # Accumulate adversarial gradients before restoring embeddings.
-                    fgm.attack()
-                    final_pred_adv, fusion_pred_adv, image_pred_adv, text_pred_adv, \
-                        _, _, text_feat_adv, image_feat_adv = self.model(**batch_data)
+                    with fgm.perturb():
+                        final_pred_adv, fusion_pred_adv, image_pred_adv, text_pred_adv, \
+                            _, _, text_feat_adv, image_feat_adv = self.model(**batch_data)
+                        cls_loss_adv = (
+                                self.criterion(final_pred_adv, batch_label) +
+                                0.5 * self.criterion(fusion_pred_adv, batch_label) +
+                                0.3 * self.criterion(image_pred_adv, batch_label) +
+                                0.3 * self.criterion(text_pred_adv, batch_label)
+                        )
+                        adaptive_con_loss_adv = self.contrastive_loss(text_feat_adv, image_feat_adv, batch_label)
+                        loss_adv = cls_loss_adv + batch_adaptive_weight * adaptive_con_loss_adv
+                        if not torch.isfinite(loss_adv).all():
+                            raise FloatingPointError('Adversarial loss is nonfinite')
+                        loss_adv.backward()
 
-                    cls_loss_adv = (
-                            self.criterion(final_pred_adv, batch_label) +
-                            0.5 * self.criterion(fusion_pred_adv, batch_label) +
-                            0.3 * self.criterion(image_pred_adv, batch_label) +
-                            0.3 * self.criterion(text_pred_adv, batch_label)
-                    )
-                    adaptive_con_loss_adv = self.contrastive_loss(
-                        text_feat_adv, image_feat_adv, batch_label
-                    )
-                    loss_adv = cls_loss_adv + batch_adaptive_weight * adaptive_con_loss_adv
-                    loss_adv.backward()
-                    fgm.restore()
-
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                if not torch.isfinite(norm):
+                    raise FloatingPointError('Training gradient is nonfinite')
                 self.optimizer.step()
                 if self.use_ema and ema:
                     ema.update()
@@ -445,25 +386,19 @@ class Trainer():
                     epoch + 1, avg_loss.item(), avg_cls_loss.item(), avg_con_loss.item(), avg_adaptive_weight.item(),
                     current_lr_bert, current_lr_other))
 
-            if self.use_ema and ema:
-                ema.apply_shadow()
-            results0, results1, results2, results3 = self.test(self.val_loader)
-            if self.use_ema and ema:
-                ema.restore()
+            with ema.average_parameters() if ema else nullcontext():
+                results0, results1, results2, results3 = self.test(self.val_loader)
 
             mark = recorder.add(results0)
             if mark == 'save':
-                if self.use_ema and ema:
-                    ema.apply_shadow()
-                torch.save(self.model.state_dict(), os.path.join(self.save_param_dir, 'parameter_DDIN.pkl'))
-                if self.use_ema and ema:
-                    ema.restore()
+                with ema.average_parameters() if ema else nullcontext():
+                    save_state(self.model, os.path.join(self.save_param_dir, 'parameter_DDIN.pkl'))
             elif mark == 'esc':
                 break
             else:
                 continue
 
-        self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl')))
+        self.model.load_state_dict(torch.load(os.path.join(self.save_param_dir, 'parameter_DDIN.pkl'), map_location='cpu', weights_only=True))
         results0, results1, results2, results3 = self.test(self.test_loader)
         if logger:
             logger.info("start testing......")
