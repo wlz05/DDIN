@@ -2,6 +2,7 @@
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
 import pickle
+from utils.features import binary_labels, read_features
 import pandas as pd
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
@@ -133,14 +134,11 @@ class bert_data():
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")
 
         content = self.data['content'].to_numpy()
-        label = torch.tensor(self.data['label'].astype(int).to_numpy())
+        label = binary_labels(self.data['label'].to_numpy())
         category = torch.tensor(self.data['category'].apply(lambda c: self.category_dict[c]).to_numpy())
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        try:
-            ordered_image = pickle.load(open(ttv, 'rb'))
-        except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
-            raise ValueError(f"[ERROR] Failed to load pickle {ttv}: {e}")
+        ordered_image = read_features(ttv, self.data.index, original_len, metadata=path, require_binding=True, view='mae')
 
         datasets = TensorDataset(
             token_ids, masks, label, category, ordered_image

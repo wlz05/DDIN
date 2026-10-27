@@ -74,10 +74,10 @@ DDIN/
 │   ├── fld.py                 # FineFake CLIP-MAE data loader (CSV → TensorDataset)
 │   ├── utils.py               # Metrics (AUC, precision/recall/F1), Recorder, clipdata2gpu, data2gpu
 │   ├── features.py            # Binary labels, bound image caches, and CLIP token fallback
-│   ├── partition.py           # Connected sample groups and mandatory split leakage checks
-│   ├── extract.py             # FineFake per-split MAE/CLIP image preprocessing (generates pkl files)
-│   ├── fsplit.py              # FineFake grouped split (60/20/20 targets, seed 3407)
-│   ├── audit.py               # Split/leakage audit for all three datasets
+│   ├── partition.py           # Connected sample groups and partition verification
+│   ├── extract.py             # Per-split MAE/CLIP preprocessing for all three datasets
+│   ├── fsplit.py              # FineFake paper classification split (6:2:2)
+│   ├── audit.py               # Partition verification for all three datasets
 │   ├── fiximg.py              # Legacy image pkl fix utility (superseded by extract.py)
 │   ├── datasets.py            # Dataset transforms (timm-based train/val augmentation)
 │   ├── crop.py                # RandomResizedCrop + padding for MAE patching
@@ -87,7 +87,7 @@ DDIN/
 │   ├── misc.py                # Distributed training utils, SmoothedValue, MetricLogger, NativeScaler
 │   └── pos.py                 # Positional encoding (sinusoidal + learnable, 1D/2D)
 ├── verify/
-│   └── boundary.py            # Metrics, training failures, cached images, and CLI regression tests
+│   └── boundary.py            # Metrics, training, image caches, and CLI regression tests
 ├── data/                      # Weibo dataset (CSV + generated pkls)
 │   ├── train_origin.csv
 │   ├── val_origin.csv
@@ -173,7 +173,7 @@ Key dependencies:
 
 ## Reproducibility
 
-Experiments use one NVIDIA GeForce RTX 4090 and seeds **42, 52, 3047, and 3407**. The default training seed is 42.
+The experiment machine has **8 NVIDIA GeForce RTX 4090 GPUs**. Training uses seeds **42, 52, 3047, and 3407**. The default training seed is 42. Each command selects its GPU through `--gpu`.
 
 ```bash
 python -B main.py --dataset weibo21 --gpu 0 --seed 42
@@ -221,28 +221,19 @@ mkdir -p ./model_weights/clip_cn/
 
 ## Quick Start
 
-### 0. Preprocess Images (required before first run, generates pkl files)
+### Prepare Partitions and Image Caches
+
+Place the released partition references alongside each dataset's prepared annotations as described in [Data Workflow](#data-workflow), then build the image caches:
 
 ```bash
-# Weibo -> data/
-python preproc.py && python clipprep.py
-
-# Weibo21 -> weibo21/
-python prepare.py && python encode.py
-
-# FineFake -> FineFake/  (1: grouped split, 2: bound image caches)
-python utils/fsplit.py && python utils/extract.py
+python -B -m utils.extract --dataset weibo --root data
+python -B -m utils.extract --dataset weibo21 --root weibo21
+python -B -m utils.fsplit --root FineFake --seed 3407
+python -B -m utils.extract --dataset finefake --root FineFake
+python -B -m utils.audit
 ```
 
-### 0.1 Verify splits / check for leakage (recommended)
-
-```bash
-python utils/audit.py
-```
-
-Prints per-split counts, label/domain distributions, and cross-split
-overlap checks (identical texts, shared post IDs, shared images) for all
-three datasets. Exits non-zero if any leakage is detected.
+The original `preproc.py`, `clipprep.py`, `prepare.py`, and `encode.py` entry points call the same preprocessing functions.
 
 ### Training
 
@@ -260,41 +251,57 @@ python main.py --dataset finefake --model_name DDIN --epoch 50 --batchsize 64 --
 python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 --lr 0.0001 --gpu 0
 ```
 
-> **Note on emb_type:** The `--emb_type` flag accepts `bert` (default) and `w2v` values.
-> Currently the `w2v` path requires a custom data loader (not included); use `bert` mode
-> for standard training.
-
 ### Arguments
 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--model_name` | `DDIN` | Model: `DDIN` (core) or `Gossip` (FineFake only) |
+| `--root_path` | dataset default | Relative prepared dataset root |
+| `--official_root` | dataset root | Relative directory containing released partition references |
 | `--dataset` | `weibo21` | Dataset: `weibo`, `weibo21`, `finefake` |
 | `--epoch` | `50` | Number of training epochs |
 | `--max_len` | `197` | Maximum text sequence length |
 | `--batchsize` | `64` | Batch size |
 | `--lr` | `0.0001` | Learning rate |
 | `--gpu` | `0` | GPU device ID |
-| `--emb_type` | `bert` | Text embedding type: `bert` (recommended) or `w2v` |
+| `--emb_type` | `bert` | BERT tokenization |
 | `--early_stop` | `5` | Early stopping patience (epochs) |
 | `--seed` | `42` | Training seed; experimental seeds: 42, 52, 3047, 3407 |
-| `--bert_emb_dim` | `768` | BERT embedding dimension (`--w2v_emb_dim` for w2v mode) |
+| `--bert_emb_dim` | `768` | BERT embedding dimension |
 
 ---
 
-## Dataset Format & Split Provenance
+## Data Workflow
 
-DDIN uses Weibo, Weibo21, and FineFake for multimodal fake news detection. The loaders read prepared CSV or Excel annotations and the corresponding image caches.
+### 1. Data Partitions
 
-| Dataset | Data and split | Files |
-|---------|--------------|-------|
-| [Weibo](https://github.com/yaqingwang/EANN-KDD18) | Weibo benchmark with prepared train/validation/test CSV annotations | `data/train_origin.csv`, `val_origin.csv`, `test_origin.csv` |
-| [Weibo21](https://github.com/kennqiang/MDFEND-Weibo21) | MDFEND-Weibo21 release with prepared train/validation/test Excel annotations | `weibo21/train_datasets.xlsx`, `val_datasets.xlsx`, `test_datasets.xlsx` |
-| [FineFake](https://github.com/Accuser907/FineFake) | Connected text/image/source groups with **60/20/20 target ratios**, label balancing, and partition seed 3407 | `FineFake/train.csv`, `val.csv`, `test.csv` |
+| Dataset | Partition source | Prepared annotations |
+| --- | --- | --- |
+| [Weibo / EANN](https://github.com/yaqingwang/EANN-KDD18) | Released `train_id.pickle`, `validate_id.pickle`, and `test_id.pickle`; retain each post's assigned subset | `data/train_origin.csv`, `val_origin.csv`, `test_origin.csv` |
+| [Weibo21 / MDFEND](https://github.com/kennqiang/MDFEND-Weibo21) | Released `train.pkl`, `val.pkl`, and `test.pkl`; retain the released subset when preparing multimodal Excel annotations | `weibo21/train_datasets.xlsx`, `val_datasets.xlsx`, `test_datasets.xlsx` |
+| [FineFake](https://github.com/Accuser907/FineFake) | The paper's **6:2:2** classification ratio, generated once with this repository's split seed **3407** | `FineFake/train.csv`, `val.csv`, `test.csv` |
 
-Validation controls early stopping; the test split is used for final evaluation. Training audits normalized text, image identifiers, available image-file hashes, and original-source IDs before loading model backbones. Cross-split overlap stops the run. Official Weibo and Weibo21 files are audited without repartitioning. FineFake groups stay intact, so achieved ratios follow group sizes rather than an exact row-level split. Run `python -B utils/audit.py --dataset finefake` to inspect the selected dataset.
+The [EANN preprocessing code](https://github.com/yaqingwang/EANN-KDD18/blob/master/src/process_data_weibo.py) selects Weibo membership by post ID. Keep `post_id` in the prepared CSVs. The [MDFEND loader](https://github.com/kennqiang/MDFEND-Weibo21/blob/main/utils/dataloader.py) reads its three released DataFrames and filters the undetermined category. Prepare Weibo21 annotations from the corresponding released subset, retaining content and labels while mapping the nine named domains to the English category names below. Put the reference pickles in the dataset root, or select their directory with `--official_root`. Training compares the prepared rows with these references before initializing a backbone.
 
-Weibo and Weibo21 use **1 = fake, 0 = real**. FineFake retains the released binary labels: **0 = fake, 1 = real**.
+The [FineFake paper, Section VI-B](https://arxiv.org/html/2404.01336#S6.SS2), specifies the classification ratio and a fixed random seed. `utils/fsplit.py` uses reproducible stratified 60/20/20 row partitions with seed 3407. Prepare the CSVs once and use the same files for all four training seeds. Weibo and Weibo21 retain **0 = real, 1 = fake**; FineFake retains **0 = fake, 1 = real**.
+
+### 2. Image Caches
+
+Create MAE and CLIP image tensors independently for `train`, `val`, and `test`. Each pickle contains the tensor, the annotation file's SHA-256, and its preprocessing view (`mae` or `clip`). Cache rows follow the annotation file's original order, including rows later removed by text filtering. The loader selects images using retained row indices. A missing or unreadable image receives a fixed black placeholder, preserving the row position. Rebuild both views whenever an annotation file changes.
+
+Preprocessing uses fixed image transforms and normalization constants. BERT, MAE, and CLIP encode the inputs inside the model. The caches contain preprocessed images; preprocessing loads no learned statistics from the dataset. CLIP images use the [Chinese-CLIP transform](https://github.com/OFA-Sys/Chinese-CLIP/blob/master/cn_clip/clip/utils.py).
+
+### 3. Training Samples
+
+The training loader draws only from `train`, with shuffling enabled. Validation and test loaders preserve their sample order and include the final partial batch. Valid text rows retain their original label, domain, and image alignment. The DDIN driver applies FGM during optimization and maintains EMA model weights. Training seeds change model initialization and training order while the three annotation files remain fixed.
+
+### 4. Validation and Model Selection
+
+After each epoch, evaluate the held-out `val` loader with gradients disabled. Select the checkpoint with the highest validation macro-F1 and stop after the configured patience. This selection rule follows the [MDFEND training implementation](https://github.com/kennqiang/MDFEND-Weibo21/blob/main/models/mdfend.py). The DDIN driver validates and saves EMA weights; the Gossip driver saves its validation-selected weights. The first valid epoch establishes the initial checkpoint.
+
+### 5. Final Test
+
+Reload the selected checkpoint, set evaluation mode, and process the complete `test` loader once. Report accuracy, macro precision, macro recall, macro-F1, ROC-AUC, and per-domain metrics from these predictions. Repeat the same fixed partition workflow for seeds **42, 52, 3047, and 3407**, then aggregate the four final test results.
 
 ### Weibo (`data/`) — 9 domains
 
@@ -341,9 +348,9 @@ Politics, Entertainment, Business, Health, Society, Conflict, Uncategorized
 ```
 FineFake/
 ├── FineFake.pkl                    # Official full data (text + image_path + label + topic, no splits)
-├── train.csv                       # 60% target (connected groups, seed 3407)
-├── val.csv                         # 20% target (disjoint from train and test)
-├── test.csv                        # 20% target (disjoint from train and val)
+├── train.csv                       # 60% train (fixed split seed 3407)
+├── val.csv                         # 20% validation
+├── test.csv                        # 20% test
 ├── f_train_loader.pkl              # MAE images [N,3,224,224] with split metadata hash
 ├── f_val_loader.pkl
 ├── f_test_loader.pkl
@@ -351,13 +358,6 @@ FineFake/
 ├── f_val_clip.pkl
 └── f_test_clip.pkl
 ```
-
-**Build FineFake splits + image pkls:**
-```bash
-python utils/fsplit.py     # FineFake.pkl -> grouped train/val/test.csv (60/20/20 targets, seed 3407)
-python utils/extract.py    # csvs -> aligned per-split MAE/CLIP image pkls
-```
-Each FineFake pickle stores raw preprocessed images and the SHA-256 of its split CSV. The loader rejects a cache created for different metadata. Rebuild both image caches after changing or regenerating the split files. BERT/MAE/CLIP encoding happens inside the model at training time. Image preprocessing uses the [Chinese-CLIP transform](https://github.com/OFA-Sys/Chinese-CLIP/blob/master/cn_clip/clip/utils.py).
 
 ### Dataset Category Mapping
 
@@ -389,14 +389,12 @@ Each FineFake pickle stores raw preprocessed images and the SHA-256 of its split
 ## Tests
 
 ```bash
-python -B -m unittest verify.boundary -v
+python -B -m unittest verify.boundary verify.protocol -v
 ```
 
-The regression suite covers metric edge cases, missing text and image-cache alignment, CLIP token fallback, single-epoch training, FGM/EMA restoration, checkpoint write failures, and command-line validation. Small tensor fixtures exercise the training loop and model dimensions without downloading pretrained backbones. Partition tests cover transitive grouping, normalized duplicate text, copied image content, stale caches, and audit failure before model loading.
+The regression suite covers metrics, official partition references, fixed FineFake ratios, aligned image caches, preprocessing views, validation selection, checkpoint restoration, and the training-to-test sequence. Small tensor fixtures exercise the training loop without downloading pretrained backbones.
 
-Custom dataset roots use relative paths through `main.py --root_path`, `utils/fsplit.py --root`, and `utils/extract.py --root`.
-
-Image caches follow the original metadata row order. When text filtering removes rows, the loaders select the corresponding cached images. CLIP fallback text uses the tokenizer's context length. Checkpoints are replaced after a complete write, and the first valid validation epoch is saved even when F1 is zero.
+Custom dataset roots use relative paths through `main.py --root_path`, `utils.fsplit --root`, and `utils.extract --root`.
 
 ## License
 

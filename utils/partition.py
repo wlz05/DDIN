@@ -11,10 +11,26 @@ import re
 import unicodedata
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 TEXT_COLUMNS = ('text', 'content', 'post_text')
 IMAGE_COLUMNS = ('image_path', 'image_id', 'image')
 SOURCE_COLUMNS = ('post_id', 'news_id', 'article_id', 'source_id', 'event_id')
+
+def paper_split(frame, seed=3407, image_root=None):
+    if type(seed) is not int or not 0 <= seed < 2 ** 32:
+        raise ValueError('Split seed must be an unsigned 32-bit integer')
+    if 'label' not in frame or frame.empty:
+        raise ValueError('Paper splits require nonempty binary annotations')
+    labels = frame['label'].to_numpy()
+    if labels.dtype.kind not in 'biuf' or not np.isfinite(labels).all() or not np.isin(labels, (0, 1)).all():
+        raise ValueError('Split labels must be finite binary values')
+    # Follow the paper ratio without reallocating connected samples.
+    train, remaining = train_test_split(frame, test_size=0.4, random_state=seed, stratify=labels)
+    val, test = train_test_split(remaining, test_size=0.5, random_state=seed, stratify=remaining['label'])
+    result = {'train': train.copy(), 'val': val.copy(), 'test': test.copy()}
+    audit_frames(result, image_root)
+    return result
 
 def normalized_text(value):
     if pd.isna(value):

@@ -310,11 +310,13 @@ class FeatureTests(unittest.TestCase):
             pd.DataFrame({'text': ['first', None, 'third'], 'label': [0, 1, 1], 'category': ['Uncategorized'] * 3}).to_csv(metadata, index=False)
             images = root / 'images.pkl'
             values = torch.arange(3, dtype=torch.float32)[:, None, None, None].expand(3, 3, 2, 2)
-            save_features(images, values, metadata)
+            save_features(images, values, metadata, view='mae')
+            clip_images = root / 'clip.pkl'
+            save_features(clip_images, values, metadata, view='clip')
             tokenizer = lambda texts, *args: (torch.ones(len(texts), 4, dtype=torch.long), torch.ones(len(texts), 4))
             loader = loader_module.bert_data(4, 2, 'unused', {'Uncategorized': 0}, num_workers=0)
             with patch.object(loader_module, 'word2input', side_effect=tokenizer), redirect_stdout(io.StringIO()):
-                result = loader.load_data(metadata, images, images, False)
+                result = loader.load_data(metadata, images, clip_images, False)
             self.assertEqual(result.dataset.tensors[4][:, 0, 0, 0].tolist(), [0, 2])
             self.assertEqual(result.dataset.tensors[6].shape, (2, 52))
 
@@ -502,18 +504,18 @@ class PartitionTests(unittest.TestCase):
 
     def test_grouping_failure_does_not_write_split_files(self):
         from utils.fsplit import prepare
-        frame = self.frame(3)
+        frame = self.frame(30)
         frame['text'] = 'one original article'
         with workspace() as root:
             frame.to_pickle(root / 'FineFake.pkl')
             previous = root / 'train.csv'
             previous.write_bytes(b'previous split')
-            with self.assertRaisesRegex(ValueError, 'independent'):
+            with self.assertRaisesRegex(ValueError, 'leakage'):
                 prepare(root)
             self.assertEqual(previous.read_bytes(), b'previous split')
             self.assertFalse((root / 'test.csv').exists())
 
-    def test_prepare_writes_audited_grouped_splits(self):
+    def test_prepare_writes_audited_paper_splits(self):
         from utils.fsplit import prepare
         from utils.partition import audit_files
         with workspace() as root:

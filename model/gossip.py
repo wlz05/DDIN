@@ -24,17 +24,7 @@ try:
     from utils.utils_gossipcop import clipdata2gpu, Averager, calculate_metrics, Recorder
 except ImportError as e:
     logger.warning(f"utils_gossipcop not found: {e}, falling back to utils.utils.")
-    from utils.utils import clipdata2gpu, Averager, Recorder
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-    def calculate_metrics(label_list, pred_probs, category_list=None, category_dict=None):
-        import numpy as np
-        preds = np.around(np.array(pred_probs)).astype(int)
-        return {
-            'acc': accuracy_score(label_list, preds),
-            'metric': f1_score(label_list, preds, average='macro'),
-            'precision': precision_score(label_list, preds, average='macro', zero_division=0),
-            'recall': recall_score(label_list, preds, average='macro', zero_division=0),
-        }
+    from utils.utils import clipdata2gpu, Averager, Recorder, calculate_metrics
 
 try:
     from .layers import *  # Assuming layers.py imports successfully
@@ -443,7 +433,7 @@ class Trainer():
                  use_cuda, lr, dropout,
                  train_loader, val_loader, test_loader, category_dict, weight_decay,
                  save_param_dir, early_stop=10, epoches=100,
-                 metric_key_for_early_stop='acc'):  # <--- change default to 'acc'
+                 metric_key_for_early_stop='metric'):
         self.lr = lr;
         self.weight_decay = weight_decay;
         self.train_loader = train_loader
@@ -475,11 +465,14 @@ class Trainer():
             logger.warning("CUDA not available/requested. Model on CPU.")
 
     def train(self):
+        if self.train_loader is None or not len(self.train_loader):
+            raise ValueError('Training loader must contain at least one batch')
         loss_fn = torch.nn.BCEWithLogitsLoss()
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.lr,
                                       weight_decay=self.weight_decay)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.98)
         recorder = Recorder(self.early_stop)
+        selected_this_run = False
 
         for epoch in range(self.epoches):
             self.model.train();
@@ -489,12 +482,10 @@ class Trainer():
                 try:
                     batch_data = clipdata2gpu(batch)
                     if batch_data is None:
-                        logger.warning(f"Skipping batch {step_n} due to data loading/GPU transfer error.")
-                        continue
+                        raise ValueError('Training batch could not be transferred')
                     label = batch_data.get('label')
                     if label is None:
-                        logger.warning(f"Skipping batch {step_n} due to missing label.")
-                        continue
+                        raise ValueError('Training batch requires labels')
 
                     final_logits, text_logits, image_logits, fusion_logits = self.model(**batch_data)
 
@@ -517,7 +508,7 @@ class Trainer():
                                      exc_info=True)
                     else:
                         logger.exception(f"Train step {step_n} error: {e}")
-                    continue
+                    raise RuntimeError("Training batch failed") from e
 
             if scheduler is not None: scheduler.step()
             logger.info(
@@ -548,35 +539,22 @@ class Trainer():
                 if mark == 'save':
                     save_p = os.path.join(self.save_param_dir, 'best_model.pth')
                     save_state(self.model, save_p)
+                    selected_this_run = True
                     logger.info(f"Best model saved based on '{self.metric_key_for_early_stop}': {save_p}")
                 elif mark == 'esc':
                     logger.info(f"Early stopping triggered based on '{self.metric_key_for_early_stop}'.")
                     break
             except Exception as e:
-                logger.exception(f"Val epoch {epoch + 1} error: {e}")
-                continue
+                raise RuntimeError("Validation failed before model selection") from e
 
         logger.info("Training loop finished.");
         recorder.showfinal()
         best_model_path = os.path.join(self.save_param_dir, 'best_model.pth');
-        loaded_best = False
+        # Reload the checkpoint selected by this run's validation results.
+        if not selected_this_run:
+            raise RuntimeError('Training produced no selected validation checkpoint')
         final_model_to_test_path = best_model_path
-        if os.path.exists(best_model_path):
-            logger.info(f"Loading best model for final test: {best_model_path}")
-            try:
-                self.model.load_state_dict(torch.load(best_model_path, map_location='cpu', weights_only=True))
-                loaded_best = True
-            except Exception as e:
-                logger.error(f"Failed to load best model state_dict: {e}. Using model state from end of training.")
-
-        if not loaded_best:  # If best model failed to load
-            final_model_to_test_path = os.path.join(self.save_param_dir, 'final_training_state.pth')
-            logger.warning(
-                f"Best model not loaded. Testing with model state from end of training. Saving this state to: {final_model_to_test_path}")
-            try:
-                save_state(self.model, final_model_to_test_path)
-            except Exception as es:
-                logger.error(f"Failed to save final training state model: {es}")
+        self.model.load_state_dict(torch.load(best_model_path, map_location='cpu', weights_only=True))
 
         final_results = None
         if self.test_loader is None:
@@ -602,64 +580,30 @@ class Trainer():
                 else:
                     logger.error("Final test did not return valid results.")
             except Exception as e:
-                logger.exception(f"Final test execution error: {e}")
+                raise RuntimeError("Final test failed") from e
         return final_results, final_model_to_test_path
 
     def test(self, dataloader):
-        pred_probs, label_list, category_list = [], [], []
         if dataloader is None:
-            logger.error("Test dataloader is None.");
-            return {}
-        self.model.eval();
-        data_iter = tqdm.tqdm(dataloader, desc="Testing")
+            raise ValueError('Evaluation requires a complete holdout loader')
+        pred_probs, label_list, category_list = [], [], []
+        self.model.eval()
+        # Score every held-out batch with frozen model parameters.
         with torch.no_grad():
-            for step_n, batch in enumerate(data_iter):
-                try:
-                    batch_data = clipdata2gpu(batch)
-                    if batch_data is None:
-                        logger.warning(f"Skipping test batch {step_n} due to data loading/GPU transfer error.")
-                        continue
-                    batch_label = batch_data.get('label')
-                    batch_category = batch_data.get('category')  # used in calculate_metrics
-                    if batch_label is None:  # category is not strictly needed, but label is
-                        logger.warning(f"Skipping test batch {step_n} due to missing label.")
-                        continue
-                    if batch_category is None:  # If category_dict is nonempty, category should also be available
-                        logger.debug(
-                            f"Test batch {step_n} missing category, will pass None to metrics if category_dict used.")
-
-                    final_logits, _, _, _ = self.model(**batch_data)
-                    batch_pred_prob = torch.sigmoid(final_logits)
-                    label_list.extend(batch_label.cpu().numpy().tolist())
-                    pred_probs.extend(batch_pred_prob.cpu().numpy().tolist())
-                    if batch_category is not None:
-                        category_list.extend(batch_category.cpu().numpy().tolist())
-                    else:  # If category missing but calculate_metrics needs it, fill placeholder
-                        category_list.extend([None] * batch_label.size(0))
-
-                except Exception as e:
-                    logger.exception(f"Test batch {step_n} error: {e}")
-                    continue  # Continue to next batch
-
-        if not label_list or not pred_probs:  # Ensure there is data to compute metrics
-            logger.warning("No data was successfully processed in test function to calculate metrics.")
-            return {}
-
-        if len(category_list) != len(label_list) and self.category_dict:
-            logger.warning(
-                f"Mismatch in length of category_list ({len(category_list)}) and label_list ({len(label_list)}). Filling with None.")
-            category_list = (category_list + [None] * len(label_list))[:len(label_list)]
-
-        try:
-            if self.category_dict:
-                metric_res = calculate_metrics(label_list, pred_probs, category_list, self.category_dict)
-            else:
-                metric_res = calculate_metrics(label_list,
-                                               pred_probs)  # Assuming calculate_metrics can work without category_list and category_dict
-        except Exception as e:
-            logger.exception(f"Metrics calculation error: {e}");
-            metric_res = {}
-        return metric_res
+            for batch in tqdm.tqdm(dataloader, desc='Testing'):
+                data = clipdata2gpu(batch)
+                if data is None or data.get('label') is None or data.get('category') is None:
+                    raise ValueError('Evaluation batch requires labels and categories')
+                logits, _, _, _ = self.model(**data)
+                probabilities = torch.sigmoid(logits)
+                if not torch.isfinite(probabilities).all():
+                    raise ValueError('Evaluation produced nonfinite probabilities')
+                pred_probs.extend(probabilities.cpu().reshape(-1).tolist())
+                label_list.extend(data['label'].cpu().reshape(-1).tolist())
+                category_list.extend(data['category'].cpu().reshape(-1).tolist())
+        if not label_list:
+            raise ValueError('Evaluation loader is empty')
+        return calculate_metrics(label_list, pred_probs, category_list, self.category_dict)
 
 # Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

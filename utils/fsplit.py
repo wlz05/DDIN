@@ -8,9 +8,9 @@ import os
 import tempfile
 import pandas as pd
 if __package__:
-    from .partition import grouped_split, SOURCE_COLUMNS
+    from .partition import paper_split, SOURCE_COLUMNS
 else:
-    from partition import grouped_split, SOURCE_COLUMNS
+    from partition import paper_split, SOURCE_COLUMNS
 
 SEED = 3407
 
@@ -28,7 +28,7 @@ def prepare(root='FineFake', seed=SEED):
         frame['image_path'] = ''
     if 'category' not in frame:
         frame['category'] = frame['topic'] if 'topic' in frame else 'Uncategorized'
-    splits = grouped_split(frame, seed=seed, image_root=base)
+    splits = paper_split(frame, seed=seed, image_root=base)
     columns = [name for name in ('text', 'image_path', 'label', 'category', 'platform', 'date', *SOURCE_COLUMNS) if name in frame]
     # Validate every split before staging any output file.
     with tempfile.TemporaryDirectory(prefix='.split-', dir=base) as directory:
@@ -40,13 +40,13 @@ def prepare(root='FineFake', seed=SEED):
     return splits
 
 def main():
-    parser = argparse.ArgumentParser(description='Build leakage-audited grouped FineFake splits')
+    parser = argparse.ArgumentParser(description='Build FineFake paper-protocol splits')
     parser.add_argument('--root', default='FineFake')
     parser.add_argument('--seed', type=int, default=SEED)
     args = parser.parse_args()
     splits = prepare(args.root, args.seed)
     total = sum(len(frame) for frame in splits.values())
-    print('Grouped FineFake split; target ratios: 0.6/0.2/0.2; seed: ' + str(args.seed))
+    print('FineFake classification split: 0.6/0.2/0.2; seed: ' + str(args.seed))
     for name, frame in splits.items():
         print(name + ': ' + str(len(frame)) + ' rows (' + format(len(frame) / total, '.1%') + ')')
     print('Rebuild per-split image caches with python utils/extract.py before training.')

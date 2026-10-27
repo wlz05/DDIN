@@ -53,7 +53,7 @@ class Run():
                 "Politics": 4, "Healthcare": 5, "Finance": 6, "Entertainment": 7, "Society": 8
             }
         elif self.dataset == "finefake":
-            # Use grouped splits with separate validation and test files.
+            # Use the fixed paper-protocol classification partitions.
             self.train_path = self.root_path + config.get('finefake_train', 'train.csv')
             self.val_path = self.root_path + config.get('finefake_val', 'val.csv')
             self.test_path = self.root_path + config.get('finefake_test', 'test.csv')
@@ -114,7 +114,10 @@ class Run():
 
     def main(self):
         from utils.partition import audit_files
-        audit_files({'train': self.train_path, 'val': self.val_path, 'test': self.test_path}, self.root_path)
+        from utils.official import verify_files
+        paths = {'train': self.train_path, 'val': self.val_path, 'test': self.test_path}
+        audit_files(paths, self.root_path)
+        verify_files(self.dataset, paths, self.configinfo.get('official_root') or self.root_path)
         train_loader, val_loader, test_loader = self.get_dataloader(self.dataset)
 
         if self.model_name == 'DDIN':

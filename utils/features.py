@@ -25,11 +25,13 @@ def metadata_hash(path):
             digest.update(chunk)
     return digest.hexdigest()
 
-def save_features(path, values, metadata):
+def save_features(path, values, metadata, view=None):
     target = Path(path)
     if target.is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0] or target.resolve() == Path(metadata).resolve():
         raise ValueError('Feature output must be relative and differ from its metadata')
-    payload = {'version': 1, 'metadata_hash': metadata_hash(metadata), 'images': values}
+    if view not in (None, 'mae', 'clip'):
+        raise ValueError('Unknown image cache view')
+    payload = {'version': 1, 'metadata_hash': metadata_hash(metadata), 'view': view, 'images': values}
     target.parent.mkdir(parents=True, exist_ok=True)
     handle, temporary = tempfile.mkstemp(prefix='.features-', dir=target.parent)
     try:
@@ -65,7 +67,7 @@ def clip_tokens(texts, tokenizer):
         raise ValueError('CLIP tokenizer must return a nonnegative integer token matrix')
     return tokens
 
-def read_features(path, indices, total_rows, metadata=None, require_binding=False):
+def read_features(path, indices, total_rows, metadata=None, require_binding=False, view=None):
     if not isinstance(path, (str, os.PathLike)) or not str(path).strip() or Path(path).is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
         raise ValueError('Image cache path must be a nonempty relative path')
     rows = np.asarray(indices)
@@ -81,6 +83,8 @@ def read_features(path, indices, total_rows, metadata=None, require_binding=Fals
     if isinstance(values, dict):
         if type(values.get('version')) is not int or values['version'] != 1 or metadata is None or values.get('metadata_hash') != metadata_hash(metadata):
             raise ValueError('Image cache belongs to different split metadata; rebuild the cache')
+        if view is not None and values.get('view') != view:
+            raise ValueError('Image cache view differs from the requested preprocessing; rebuild the cache')
         values = values.get('images')
     elif require_binding:
         raise ValueError('This dataset requires metadata-bound image caches; run utils/extract.py')
@@ -93,7 +97,7 @@ def read_features(path, indices, total_rows, metadata=None, require_binding=Fals
     if len(values) == total_rows:
         if not torch.equal(selected, torch.arange(total_rows)):
             values = values.index_select(0, selected.to(values.device))
-    elif len(values) != len(selected):
+    elif require_binding or len(values) != len(selected):
         raise ValueError('Image cache row count differs from the metadata')
     for chunk in values.split(64):
         if not torch.isfinite(chunk).all():

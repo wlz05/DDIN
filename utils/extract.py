@@ -1,118 +1,83 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
-"""
-FineFake per-split image preprocessing.
-
-Builds the two image pkls each split needs, aligned row-by-row with the
-split CSVs produced by utils/fsplit.py (grouped 60/20/20 targets):
-
-  - f_{split}_loader.pkl : MAE-style transformed raw images [N, 3, 224, 224]
-                           (same transforms as preproc.py for Weibo)
-  - f_{split}_clip.pkl   : CLIP-preprocessed raw images      [N, 3, 224, 224]
-                           (same as clipprep.py for Weibo)
-
-The old version dumped 512-d CLIP *features* into BOTH files (and from the
-FULL dataset into files named f_train_*): the MAE branch of the model
-expects raw images and CLIP re-encodes its own input, so features in place
-of raw images broke both branches and mixed up the two modalities.
-Feature extraction happens inside the model now, same as Weibo/Weibo21.
-
-Run utils/fsplit.py first.
-"""
-
-import torch
 import argparse
 import ntpath
 from pathlib import Path
 import pandas as pd
-import os
-import numpy as np
-from PIL import Image, ImageFile
+import torch
+from PIL import Image
 from tqdm import tqdm
-from torchvision import transforms
-from cn_clip.clip.utils import image_transform
 if __package__:
     from .features import save_features
 else:
     from features import save_features
 
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+ROOTS = {'weibo': 'data', 'weibo21': 'weibo21', 'finefake': 'FineFake'}
 
-ROOT = './FineFake/'
-SPLITS = ['train', 'val', 'test']
-
-def encode_split(split, clip_preprocess, mae_transform, root=ROOT):
-    if Path(root).is_absolute() or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
+def encode_split(split, clip_preprocess, mae_transform, root='FineFake', dataset='finefake', view='both'):
+    base = Path(root)
+    if base.is_absolute() or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
         raise ValueError('Image dataset root must be relative')
-    csv_path = os.path.join(root, f'{split}.csv')
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(
-            f"[ERROR] Split file not found: {csv_path}. Run utils/fsplit.py first.")
-
-    df = pd.read_csv(csv_path)
-    if df.empty:
+    if dataset not in ROOTS or split not in ('train', 'val', 'test') or view not in ('mae', 'clip', 'both'):
+        raise ValueError('Unknown dataset, split, or preprocessing view')
+    filename = split + ('_datasets.xlsx' if dataset == 'weibo21' else '_origin.csv' if dataset == 'weibo' else '.csv')
+    metadata = base / filename
+    frame = pd.read_excel(metadata) if dataset == 'weibo21' else pd.read_csv(metadata)
+    if frame.empty:
         raise ValueError('Image preprocessing requires a nonempty split')
-    if 'image_path' not in df.columns:
-        df['image_path'] = ""
+    images = {}
+    if dataset != 'finefake':
+        for directory in ('nonrumor_images', 'rumor_images'):
+            for path in sorted((base / directory).glob('*')):
+                if path.is_file():
+                    images.setdefault(path.stem, path)
+    streams = {name: [] for name in ('mae', 'clip') if view in (name, 'both')}
+    missing = 0
+    column = 'image_path' if dataset == 'finefake' else 'image_id' if dataset == 'weibo' else 'image'
+    if column not in frame:
+        raise ValueError('Image annotations require ' + column)
+    # Keep exactly one transformed image per annotation row.
+    for value in tqdm(frame[column], desc=split):
+        photo = None
+        if isinstance(value, str) and value.strip():
+            if dataset == 'finefake':
+                if ntpath.isabs(value) or ntpath.splitdrive(value)[0]:
+                    raise ValueError('Image annotation paths must be relative')
+                path = base / value
+            else:
+                path = next((images[key] for part in value.split('|') if (key := Path(part.strip()).stem) in images), None)
+            if path is not None and path.is_file():
+                try:
+                    with Image.open(path) as source:
+                        photo = source.convert('RGB')
+                except (OSError, ValueError):
+                    pass
+        if photo is None:
+            missing += 1
+            photo = Image.new('RGB', (224, 224), (0, 0, 0))
+        for name, stream in streams.items():
+            stream.append((mae_transform if name == 'mae' else clip_preprocess)(photo))
+    prefix = 'f_' if dataset == 'finefake' else ''
+    for name, stream in streams.items():
+        suffix = '_loader.pkl' if name == 'mae' else '_clip.pkl' if dataset == 'finefake' else '_clip_loader.pkl'
+        save_features(base / (prefix + split + suffix), torch.stack(stream), metadata, view=name)
+    print(split + ': ' + str(len(frame)) + ' rows; ' + str(missing) + ' placeholder images')
 
-    mae_images = []
-    clip_images = []
-    missing_count = 0
-    corrupted_count = 0
-
-    # Keep both image streams aligned with the CSV rows.
-    for _, row in tqdm(df.iterrows(), total=len(df), desc=f"[{split}]"):
-        rel = row['image_path']
-        img_path = os.path.join(root, str(rel)) if isinstance(rel, str) and rel.strip() else None
-
-        img_pil = None
-        if img_path is None or not os.path.isfile(img_path):
-            missing_count += 1
-        else:
-            try:
-                img_pil = Image.open(img_path).convert('RGB')
-            except Exception:
-                corrupted_count += 1
-
-        if img_pil is None:
-            mae_images.append(torch.zeros(3, 224, 224))
-            clip_images.append(clip_preprocess(Image.new('RGB', (224, 224), (0, 0, 0))))
-        else:
-            mae_images.append(mae_transform(img_pil))
-            clip_images.append(clip_preprocess(img_pil))
-
-    mae_tensor = torch.stack(mae_images)
-    clip_tensor = torch.stack(clip_images)
-    assert mae_tensor.size(0) == len(df) and clip_tensor.size(0) == len(df)
-
-    loader_path = os.path.join(root, f'f_{split}_loader.pkl')
-    clip_path = os.path.join(root, f'f_{split}_clip.pkl')
-    # Bind both image streams to the exact split metadata.
-    save_features(loader_path, mae_tensor, csv_path)
-    save_features(clip_path, clip_tensor, csv_path)
-
-    print(f"[{split}] {len(df)} rows -> {loader_path} {tuple(mae_tensor.shape)}, "
-          f"{clip_path} {tuple(clip_tensor.shape)} "
-          f"(missing: {missing_count}, corrupted: {corrupted_count})")
+def main(dataset=None, view='both'):
+    from torchvision import transforms
+    from cn_clip.clip.utils import image_transform
+    parser = argparse.ArgumentParser(description='Build per-split MAE and CLIP image caches')
+    parser.add_argument('--dataset', choices=tuple(ROOTS), default=dataset or 'finefake')
+    parser.add_argument('--root', default=None)
+    parser.add_argument('--view', choices=('mae', 'clip', 'both'), default=view)
+    args = parser.parse_args()
+    mae = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(), transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+    for split in ('train', 'val', 'test'):
+        encode_split(split, image_transform(224), mae, args.root or ROOTS[args.dataset], args.dataset, args.view)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Build FineFake image caches bound to split metadata')
-    parser.add_argument('--root', default=ROOT)
-    args = parser.parse_args()
-    clip_preprocess = image_transform(224)
-
-    mae_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    for split in SPLITS:
-        encode_split(split, clip_preprocess, mae_transform, args.root)
-
-    print("[INFO] Done. Per-split MAE/CLIP image pkls are aligned with train/val/test.csv.")
+    main()
 
 # Author: Weiliang Zhu; Other main author: Yaming Lv
 # Email: wlzchina05@gmail.com

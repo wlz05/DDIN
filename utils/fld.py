@@ -97,8 +97,8 @@ class bert_data():
 
         token_ids, masks = word2input(content, self.vocab_file, self.max_len)
 
-        ordered_image = read_features(imagepath, self.data.index, original_len, metadata=path, require_binding=True)
-        clip_image = read_features(clipimagepath, self.data.index, original_len, metadata=path, require_binding=True)
+        ordered_image = read_features(imagepath, self.data.index, original_len, metadata=path, require_binding=True, view='mae')
+        clip_image = read_features(clipimagepath, self.data.index, original_len, metadata=path, require_binding=True, view='clip')
 
         clip_text = clip_tokens(content, clip.tokenize)
 

@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--early_stop', type=int, default=5)  # tolerance of 5 to avoid early interruption
     parser.add_argument('--bert_vocab_file', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch/vocab.txt')
     parser.add_argument('--root_path', default=None)
+    parser.add_argument('--official_root', default=None)
     parser.add_argument('--bert', default='./pretrained_model/chinese_roberta_wwm_base_ext_pytorch')
     parser.add_argument('--batchsize', type=int, default=64)
     parser.add_argument('--seed', type=int, default=42)
@@ -70,6 +71,7 @@ def main():
         'emb_type': args.emb_type,
         'bert': args.bert,
         'root_path': args.root_path,
+        'official_root': args.official_root,
         'weight_decay': 5e-5,
         'model': {
             'mlp': {'dims': [384], 'dropout': 0.2}
@@ -83,7 +85,7 @@ def main():
         'dataset': args.dataset
     }
     if args.dataset == 'finefake':
-        # Grouped splits target 6:2:2 with seed 3407.
+        # Keep the paper split fixed across training seeds.
         config['finefake_train'] = 'train.csv'
         config['finefake_val'] = 'val.csv'
         config['finefake_test'] = 'test.csv'
