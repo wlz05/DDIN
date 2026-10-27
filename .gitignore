@@ -27,6 +27,7 @@ env/
 Thumbs.db
 
 # Model checkpoints
+model_weights/
 *.pth
 *.pt
 *.ckpt

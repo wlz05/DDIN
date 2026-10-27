@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
+from utils.cache import cache_directory
 import os
 import tqdm
 import torch
@@ -50,7 +51,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.unified_dim, self.text_dim = emb_dim, 768
         self.image_dim = 768
 
-        self.bert = BertModel.from_pretrained(bert, cache_dir='./model_weights/huggingface').requires_grad_(False)
+        self.bert = BertModel.from_pretrained(bert, cache_dir=cache_directory('huggingface')).requires_grad_(False)
 
         feature_kernel = {1: 64, 2: 64, 3: 64, 5: 64, 10: 64}
 
@@ -117,7 +118,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         if clip is not None:
             try:
                 clip_device = "cuda" if torch.cuda.is_available() else "cpu"
-                self.ClipModel, _ = load_from_name("ViT-B-16", device=clip_device, download_root='./model_weights/clip_cn/')
+                self.ClipModel, _ = load_from_name("ViT-B-16", device=clip_device, download_root=cache_directory('clip'))
             except Exception as e:
                 print(f"Warning: Could not load CLIP model. Error: {e}")
                 self.ClipModel = None

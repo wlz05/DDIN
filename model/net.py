@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
+from utils.cache import cache_directory
 import os
 import tqdm
 import torch
@@ -92,7 +93,7 @@ class DDIN(nn.Module):
             raise ValueError('Hidden dimension must be a positive multiple of eight; domains must be positive')
         self.dropout = dropout
 
-        self.bert = BertModel.from_pretrained(bert_model_path, cache_dir='./model_weights/huggingface')
+        self.bert = BertModel.from_pretrained(bert_model_path, cache_dir=cache_directory('huggingface'))
 
         self.mae = mae.__dict__['mae_vit_base_patch16'](norm_pix_loss=False)
         checkpoint = torch.load(mae_model_path, map_location='cpu')
@@ -100,7 +101,7 @@ class DDIN(nn.Module):
         # Exclude the no-gradient backbone from optimizer and EMA state.
         self.mae.requires_grad_(False)
 
-        self.clip_model, _ = load_from_name(clip_model_name, device='cpu', download_root='./model_weights/clip_cn/')
+        self.clip_model, _ = load_from_name(clip_model_name, device='cpu', download_root=cache_directory('clip'))
 
         self.text_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)
         self.image_local_proj = MultiScaleSemanticProjection(768, hidden_dim, num_scales=3)

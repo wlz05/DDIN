@@ -4,6 +4,7 @@
 import ast
 import io
 import logging
+import os
 from pathlib import Path
 import pickle
 import sys
@@ -13,6 +14,7 @@ import unittest
 from unittest.mock import Mock, patch
 import pandas as pd
 import torch
+from utils.cache import cache_directory
 from utils.features import save_features, read_features
 from utils.official import verify_files
 from utils.partition import paper_split
@@ -21,6 +23,30 @@ from model.training import save_state
 from verify.boundary import workspace
 
 class ProtocolTests(unittest.TestCase):
+    def test_resnet_downloads_follow_a_relocated_project_cache(self):
+        from model.layers import image_extractor
+        from torchvision.models import resnet18, ResNet18_Weights
+        state = resnet18(weights=None).state_dict()
+        previous = Path.cwd()
+        with workspace() as root:
+            destinations = [(root / name).resolve() for name in ('first', 'relocated')]
+            def download(model_dir, **kwargs):
+                self.assertFalse(Path(model_dir).is_absolute())
+                target = Path(model_dir)
+                target.mkdir(parents=True, exist_ok=True)
+                (target / 'cached.pth').write_bytes(b'cached weights')
+                return state
+            try:
+                for destination in destinations:
+                    destination.mkdir()
+                    os.chdir(destination)
+                    with patch.object(ResNet18_Weights.IMAGENET1K_V1, 'get_state_dict', side_effect=download):
+                        model = image_extractor(8)
+                    self.assertEqual(model.img_fc.out_features, 8)
+                    self.assertTrue((Path(cache_directory('torch')) / 'cached.pth').is_file())
+            finally:
+                os.chdir(previous)
+
     def test_resnet_keeps_its_pretrained_weights_with_a_relative_cache(self):
         source = ast.parse(Path('model/layers.py').read_text(encoding='utf-8'))
         node = next(item for item in source.body if isinstance(item, ast.ClassDef) and item.name == 'image_extractor')
@@ -32,7 +58,7 @@ class ProtocolTests(unittest.TestCase):
         parameters = {'pretrained': torch.ones(1)}
         weights = SimpleNamespace(get_state_dict=Mock(return_value=parameters))
         constructor = Mock(return_value=backbone)
-        namespace = {'torch': torch, 'F': torch.nn.functional, 'resnet18': constructor, 'ResNet18_Weights': SimpleNamespace(IMAGENET1K_V1=weights)}
+        namespace = {'torch': torch, 'F': torch.nn.functional, 'resnet18': constructor, 'ResNet18_Weights': SimpleNamespace(IMAGENET1K_V1=weights), 'cache_directory': cache_directory}
         exec(compile(ast.Module(body=[node], type_ignores=[]), 'layers.py', 'exec'), namespace)
         namespace['image_extractor'](out_channels=4)
         constructor.assert_called_once_with(weights=None)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
+from utils.cache import cache_directory
 import os
 import tqdm
 import torch
@@ -277,7 +278,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         try:
             logger.info(f"Loading BERT from: {bert_path}")
-            self.bert = BertModel.from_pretrained(bert_path, cache_dir='./model_weights/huggingface')
+            self.bert = BertModel.from_pretrained(bert_path, cache_dir=cache_directory('huggingface'))
             for param in self.bert.parameters(): param.requires_grad_(False)
             if self.use_cuda: self.bert.cuda()
             logger.info("BERT loaded successfully.")
@@ -314,7 +315,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         try:
             if self.dataset_type == 'gossipcop':
                 logger.info(f"Loading HuggingFace CLIP model from: {clip_path}")
-                self.clip_model_hf = CLIPModel.from_pretrained(clip_path, cache_dir='./model_weights/huggingface')
+                self.clip_model_hf = CLIPModel.from_pretrained(clip_path, cache_dir=cache_directory('huggingface'))
                 for param in self.clip_model_hf.parameters(): param.requires_grad_(False)
                 if self.use_cuda: self.clip_model_hf.cuda()
                 logger.info("HuggingFace CLIP model loaded successfully.")
@@ -328,13 +329,13 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                             clip_path if os.path.isdir(clip_path) or os.path.isfile(
                                 clip_path) else cn_clip_vision_model_name,
                             device=device_for_cn_clip,
-                            download_root='./model_weights/clip_cn/')
+                            download_root=cache_directory('clip'))
                     except Exception as e_load:
                         logger.warning(
                             f"Failed to load CN-CLIP from '{clip_path}', trying the default model: {e_load}")
                         self.clip_model_cn, _ = cn_clip_lib.load_from_name(cn_clip_vision_model_name,
                                                                            device=device_for_cn_clip,
-                                                                           download_root='./model_weights/clip_cn/')
+                                                                           download_root=cache_directory('clip'))
 
                     for param in self.clip_model_cn.parameters(): param.requires_grad_(False)
                     logger.info("CN-CLIP model loaded successfully.")

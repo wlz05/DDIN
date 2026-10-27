@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
+from utils.cache import cache_directory
 import os
 import tqdm
 import torch
@@ -57,7 +58,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.num_share = 1
         self.unified_dim, self.text_dim = emb_dim, 768
         self.image_dim = 768
-        self.bert = BertModel.from_pretrained(bert, cache_dir='./model_weights/huggingface').requires_grad_(False)
+        self.bert = BertModel.from_pretrained(bert, cache_dir=cache_directory('huggingface')).requires_grad_(False)
         feature_kernel = {1: 64, 2: 64, 3: 64, 5: 64, 10: 64}
         self.text_token_len = 128
         self.image_token_len = 197
@@ -268,7 +269,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         self.irrelevant_tensor = nn.ParameterList(
             [nn.Parameter(torch.ones((1, 320)), requires_grad=True) for _ in range(self.domain_num)])
 
-        self.ClipModel,_ = load_from_name("ViT-B-16", device="cuda", download_root='./model_weights/clip_cn/')
+        self.ClipModel,_ = load_from_name("ViT-B-16", device="cuda", download_root=cache_directory('clip'))
     def forward(self, **kwargs):
         inputs = kwargs['content']
         masks = kwargs['content_masks']

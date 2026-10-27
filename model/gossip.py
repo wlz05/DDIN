@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # DDIN: Domain-aware Disentangled Interaction Network for Multimodal Fake News Detection (accepted by WISE 2026)
 
+from utils.cache import cache_directory
 import logging
 
 logger = logging.getLogger(__name__)
@@ -213,7 +214,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
 
         try:
             logger.info(f"Loading BERT: {self.bert_path}")
-            self.bert = BertModel.from_pretrained(self.bert_path, local_files_only=True, cache_dir='./model_weights/huggingface')
+            self.bert = BertModel.from_pretrained(self.bert_path, local_files_only=True, cache_dir=cache_directory('huggingface'))
             logger.info("BERT loaded.")
             for p in self.bert.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.bert = self.bert.cuda()
@@ -239,7 +240,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             self.image_model = None
         try:
             logger.info(f"Loading CLIP: {self.clip_path}")
-            self.clip_model, _ = load_from_name(self.clip_path, device="cuda" if self.use_cuda else "cpu", download_root='./model_weights/clip_cn/')
+            self.clip_model, _ = load_from_name(self.clip_path, device="cuda" if self.use_cuda else "cpu", download_root=cache_directory('clip'))
             logger.info("CLIP loaded.")
             for p in self.clip_model.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.clip_model = self.clip_model.cuda()

@@ -74,6 +74,7 @@ DDIN/
 │   ├── fld.py                 # FineFake CLIP-MAE data loader (CSV → TensorDataset)
 │   ├── utils.py               # Metrics (AUC, precision/recall/F1), Recorder, clipdata2gpu, data2gpu
 │   ├── features.py            # Binary labels, bound image caches, and CLIP token fallback
+│   ├── cache.py               # Relative model download caches
 │   ├── partition.py           # Connected sample groups and partition verification
 │   ├── extract.py             # Per-split MAE/CLIP preprocessing for all three datasets
 │   ├── fsplit.py              # FineFake paper classification split (6:2:2)
@@ -217,7 +218,7 @@ mkdir -p ./model_weights/clip_cn/
 # Place at: ./pretrained_model/w2v/
 ```
 
-Model downloads use `./model_weights/huggingface` for Hugging Face assets, `./model_weights/clip_cn/` for Chinese-CLIP, and `./model_weights/checkpoints` for PyTorch checkpoints. Keep these directories with the project when moving an experiment to another machine.
+Model downloads use `./model_weights/huggingface` for Hugging Face assets, `./model_weights/clip_cn/` for Chinese-CLIP, and `./model_weights/checkpoints` for PyTorch checkpoints. Keep these directories with the project when moving an experiment to another machine. Model caches are excluded from Git.
 
 ---
 
