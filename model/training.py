@@ -130,7 +130,7 @@ class WarmupCosineAnnealingLR:
 
 def save_state(model, path):
     target = Path(path)
-    if not str(path).strip() or target.is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
+    if not str(path).strip() or target.is_absolute() or str(path).startswith(("/", "\\")) or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
         raise ValueError('Checkpoint path must be a nonempty relative path')
     state = {name: value.detach().cpu() for name, value in model.state_dict().items()}
     if any(not torch.isfinite(value).all() for value in state.values()):

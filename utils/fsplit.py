@@ -16,7 +16,7 @@ SEED = 3407
 
 def prepare(root='FineFake', seed=SEED):
     base = Path(root)
-    if base.is_absolute() or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
+    if base.is_absolute() or str(root).startswith(("/", "\\")) or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
         raise ValueError('FineFake root must be relative')
     frame = pd.read_pickle(base / 'FineFake.pkl')
     if not isinstance(frame, pd.DataFrame) or not {'text', 'label'}.issubset(frame.columns):

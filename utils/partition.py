@@ -122,7 +122,7 @@ def audit_files(paths, image_root=None):
     frames = {}
     for name, value in paths.items():
         path = Path(value)
-        if path.is_absolute() or ntpath.isabs(str(value)) or ntpath.splitdrive(str(value))[0]:
+        if path.is_absolute() or str(value).startswith(("/", "\\")) or ntpath.isabs(str(value)) or ntpath.splitdrive(str(value))[0]:
             raise ValueError('Dataset paths must be relative')
         frames[name] = pd.read_excel(path) if path.suffix.lower() in ('.xlsx', '.xls') else pd.read_csv(path)
     return audit_frames(frames, image_root)

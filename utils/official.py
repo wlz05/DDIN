@@ -13,7 +13,7 @@ def verify_files(dataset, paths, source_root):
     root = Path(source_root)
     if dataset not in ('weibo', 'weibo21'):
         return {}
-    if root.is_absolute() or ntpath.isabs(str(source_root)) or ntpath.splitdrive(str(source_root))[0]:
+    if root.is_absolute() or str(source_root).startswith(("/", "\\")) or ntpath.isabs(str(source_root)) or ntpath.splitdrive(str(source_root))[0]:
         raise ValueError('Official reference root must be relative')
     sources = {'train': 'train_id.pickle', 'val': 'validate_id.pickle', 'test': 'test_id.pickle'} if dataset == 'weibo' else {name: name + '.pkl' for name in paths}
     signatures = {}

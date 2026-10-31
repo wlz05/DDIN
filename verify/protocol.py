@@ -18,11 +18,55 @@ from utils.cache import cache_directory
 from utils.features import save_features, read_features
 from utils.official import verify_files
 from utils.partition import paper_split
-from utils.utils import Recorder, Averager
+from utils.utils import Recorder, Averager, batch2dict, calculate_metrics, clipdata2gpu
 from model.training import save_state
 from verify.boundary import workspace
 
 class ProtocolTests(unittest.TestCase):
+    def test_default_entry_runs_the_complete_four_seed_grid(self):
+        import main
+        with patch.object(sys, "argv", ["main.py"]), patch.object(main, "Run"), patch.object(main, "run_seeds", return_value={}) as sweep, redirect_stdout(io.StringIO()):
+            main.main()
+        self.assertEqual(sweep.call_args.args[1], [42, 52, 3047, 3407])
+
+    def test_seed_summary_averages_metrics_without_pooling_predictions(self):
+        from run import SEEDS, seed_summary
+        rows = [{"seed": seed, "metrics": {"metric": value, "domain": {"auc": None}}, "protocol": {"inputs": "fixed"}} for seed, value in zip(SEEDS, (0.2, 0.4, 0.6, 0.8))]
+        result = seed_summary(rows)
+        self.assertAlmostEqual(result["metrics"]["metric"]["mean"], 0.5)
+        self.assertAlmostEqual(result["metrics"]["metric"]["sample_std"], 0.2581988897471611)
+        self.assertIsNone(result["metrics"]["domain.auc"]["mean"])
+        self.assertEqual(result["metrics"]["domain.auc"]["undefined_seeds"], list(SEEDS))
+        for bad in (rows[:-1], rows + [rows[0]], [{**row, "protocol": {}} if index == 1 else row for index, row in enumerate(rows)], [{**row, "metrics": {"metric": float("nan")}} if index == 1 else row for index, row in enumerate(rows)]):
+            with self.assertRaises(ValueError):
+                seed_summary(bad)
+
+    def test_seed_runner_freezes_annotations_and_isolates_outputs(self):
+        from run import SEEDS, run_seeds
+        with workspace() as root:
+            paths = [root / (name + ".csv") for name in ("train", "val", "test")]
+            for path in paths:
+                path.write_text("fixed annotations", encoding="ascii")
+            runner = SimpleNamespace(train_path=str(paths[0]), val_path=str(paths[1]), test_path=str(paths[2]), main=Mock(side_effect=[({"metric": value},) for value in (0.2, 0.4, 0.6, 0.8)]))
+            output = root / "models"
+            config = {"save_param_dir": str(output), "model_name": "DDIN", "dataset": "weibo", "use_cuda": False}
+            with patch("run.Run", return_value=runner) as driver:
+                result = run_seeds(config)
+            self.assertEqual([item.args[0]["seed"] for item in driver.call_args_list], list(SEEDS))
+            self.assertEqual(len({item.args[0]["save_param_dir"] for item in driver.call_args_list}), 4)
+            self.assertAlmostEqual(result["metrics"]["metric"]["mean"], 0.5)
+            self.assertTrue((output / "summary.json").is_file())
+            for seed in SEEDS:
+                self.assertTrue((output / ("seed" + str(seed)) / "DDIN" / "result.json").is_file())
+            def changed():
+                paths[0].write_text("changed annotations", encoding="ascii")
+                return ({"metric": 1.0},)
+            runner.main.side_effect = changed
+            config["save_param_dir"] = str(root / "changed")
+            with patch("run.Run", return_value=runner), self.assertRaisesRegex(ValueError, "changed"):
+                run_seeds(config)
+            self.assertFalse((root / "changed" / "summary.json").exists())
+
     def test_resnet_downloads_follow_a_relocated_project_cache(self):
         from model.layers import image_extractor
         from torchvision.models import resnet18, ResNet18_Weights
@@ -93,13 +137,14 @@ class ProtocolTests(unittest.TestCase):
             for seed in (42, 52, 3047, 3407):
                 with self.subTest(dataset=dataset, seed=seed):
                     arguments = ['main.py', '--dataset', dataset.upper(), '--seed', str(seed)]
-                    with patch.object(sys, 'argv', arguments), patch.object(main, 'Run') as launch, redirect_stdout(io.StringIO()):
+                    with patch.object(sys, 'argv', arguments), patch.object(main, 'Run') as launch, patch.object(main, 'run_seeds', return_value={}) as sweep, redirect_stdout(io.StringIO()):
                         main.main()
                     config = launch.call_args.kwargs['config']
                     self.assertEqual((config['max_len'], config['weight_decay'], config['seed']), (128, 0.01, seed))
                     runner = Run(config)
                     self.assertEqual(tuple(Path(path).name for path in (runner.train_path, runner.val_path, runner.test_path)), expected)
-                    launch.return_value.main.assert_called_once_with()
+                    sweep.assert_called_once_with(config, [seed])
+                    launch.return_value.main.assert_not_called()
 
     def test_token_fusion_preserves_modalities_at_different_text_lengths(self):
         source = ast.parse(Path('model/layers.py').read_text(encoding='utf-8'))
@@ -200,15 +245,82 @@ class ProtocolTests(unittest.TestCase):
             def set_postfix(self, **kwargs):
                 pass
 
-        namespace = {'torch': torch, 'os': __import__('os'), 'logger': logging.getLogger('protocol'), 'Recorder': Recorder, 'Averager': Averager, 'save_state': save_state, 'clipdata2gpu': lambda batch: batch, 'tqdm': SimpleNamespace(tqdm=lambda items, **kwargs: Progress(items))}
+        namespace = {'torch': torch, 'os': __import__('os'), 'logger': logging.getLogger('protocol'), 'Recorder': Recorder, 'Averager': Averager, 'save_state': save_state, 'clipdata2gpu': clipdata2gpu, 'batch2dict': batch2dict, 'calculate_metrics': calculate_metrics, 'tqdm': SimpleNamespace(tqdm=lambda items, **kwargs: Progress(items))}
         exec(compile(ast.Module(body=[node], type_ignores=[]), 'gossip.py', 'exec'), namespace)
         trainer = object.__new__(namespace['Trainer'])
         trainer.model = Model()
+        trainer.use_cuda = False
         trainer.lr, trainer.weight_decay, trainer.early_stop, trainer.epoches = 0.001, 0, 1, 1
         trainer.train_loader, trainer.val_loader, trainer.test_loader = [{'label': torch.tensor([0., 1.])}], ['val'], ['test']
         trainer.save_param_dir, trainer.category_dict, trainer.metric_key_for_early_stop = str(root), {}, 'metric'
         trainer.test = validation
         return trainer
+
+    def test_gossip_backbone_load_failures_stop_construction(self):
+        source = ast.parse(Path("model/gossip.py").read_text(encoding="utf-8"))
+        node = next(item for item in source.body if isinstance(item, ast.ClassDef) and item.name == "MultiDomainPLEFENDModel")
+        for failure in ("bert", "missing_mae", "mae", "clip"):
+            with self.subTest(failure=failure):
+                backbone = torch.nn.Linear(1, 1)
+                bert = Mock(return_value=backbone, side_effect=OSError("interrupted") if failure == "bert" else None)
+                mae = Mock(return_value=backbone, side_effect=OSError("interrupted") if failure == "mae" else None)
+                clip = Mock(return_value=(backbone, None), side_effect=OSError("interrupted") if failure == "clip" else None)
+                namespace = {"torch": torch, "nn": torch.nn, "logger": Mock(), "os": os, "cache_directory": cache_directory, "BertModel": SimpleNamespace(from_pretrained=bert), "mae": SimpleNamespace(mae_vit_base_patch16=mae), "load_from_name": clip}
+                exec(compile(ast.Module(body=[node], type_ignores=[]), "gossip.py", "exec"), namespace)
+                with patch("os.path.exists", return_value=failure != "missing_mae"), patch.object(torch, "load", return_value={"model": backbone.state_dict()}):
+                    with self.assertRaisesRegex(RuntimeError, "backbone"):
+                        namespace["MultiDomainPLEFENDModel"](768, [4], "weights/bert", "ViT-B-16", 320, 0.1, use_cuda=False)
+
+    def test_gossip_backbone_errors_stop_forward_inference(self):
+        source = ast.parse(Path("model/gossip.py").read_text(encoding="utf-8"))
+        node = next(item for item in source.body if isinstance(item, ast.ClassDef) and item.name == "MultiDomainPLEFENDModel")
+        forward = next(item for item in node.body if isinstance(item, ast.FunctionDef) and item.name == "forward")
+        namespace = {"torch": torch, "logger": Mock()}
+        exec(compile(ast.Module(body=[forward], type_ignores=[]), "gossip.py", "exec"), namespace)
+        for failure in ("bert", "mae", "clip"):
+            with self.subTest(failure=failure):
+                model = SimpleNamespace(bert=Mock(return_value=SimpleNamespace(last_hidden_state=torch.ones(1, 3, 4))), image_model=Mock(), clip_model=Mock(), text_token_len_expected=3, image_token_len_expected=2, unified_dim=4)
+                model.image_model.forward_ying.return_value = torch.ones(1, 2, 4)
+                model.clip_model.encode_image.return_value = torch.ones(1, 512)
+                model.clip_model.encode_text.return_value = torch.ones(1, 512)
+                operation = model.bert if failure == "bert" else model.image_model.forward_ying if failure == "mae" else model.clip_model.encode_image
+                operation.side_effect = OSError("interrupted")
+                batch = {"content": torch.ones(1, 3, dtype=torch.long), "content_masks": torch.ones(1, 3), "image": torch.zeros(1, 3, 4, 4), "clip_image": torch.zeros(1, 3, 4, 4), "clip_text": torch.ones(1, 3, dtype=torch.long)}
+                with self.assertRaisesRegex(RuntimeError, "forward failed") as caught:
+                    namespace["forward"](model, **batch)
+                self.assertEqual(str(caught.exception.__cause__), "interrupted")
+
+    def test_gossip_cpu_training_and_evaluation_never_call_cuda(self):
+        with workspace() as root:
+            trainer = self.gossip(root, lambda loader: {"metric": 0.0, "acc": 0.0})
+            trainer.train_loader[0]["category"] = torch.zeros(2, dtype=torch.long)
+            with redirect_stdout(io.StringIO()), patch.object(torch.Tensor, "cuda", side_effect=AssertionError("Unexpected CUDA")):
+                trainer.train()
+                result = type(trainer).test(trainer, trainer.train_loader)
+            self.assertEqual(result["acc"], 0.5)
+
+    def test_gossip_rejects_nonfinite_loss_and_gradients_before_updates(self):
+        for failure in ("loss", "gradient"):
+            with self.subTest(failure=failure), workspace() as root:
+                trainer = self.gossip(root, lambda loader: {"metric": 0.0})
+                if failure == "loss":
+                    trainer.model.forward = lambda label, **kwargs: (trainer.model.value.expand_as(label) * float("nan"),) * 4
+                else:
+                    trainer.model.value.register_hook(lambda gradient: torch.full_like(gradient, float("inf")))
+                before = trainer.model.value.detach().clone()
+                with redirect_stdout(io.StringIO()), self.assertLogs("protocol", level="ERROR"):
+                    with self.assertRaisesRegex(RuntimeError, "Training batch failed"):
+                        trainer.train()
+                torch.testing.assert_close(trainer.model.value.detach(), before)
+                self.assertFalse((root / "best_model.pth").exists())
+
+    def test_gossip_evaluation_rejects_infinite_logits(self):
+        with workspace() as root:
+            trainer = self.gossip(root, lambda loader: {})
+            trainer.model.forward = lambda label, **kwargs: (torch.full_like(label, float("inf")),) * 4
+            batch = {"label": torch.tensor([0., 1.]), "category": torch.zeros(2, dtype=torch.long)}
+            with self.assertRaisesRegex(ValueError, "nonfinite"):
+                type(trainer).test(trainer, [batch])
 
     def test_failed_validation_never_reuses_a_stale_checkpoint(self):
         with workspace() as root:

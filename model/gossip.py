@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 import os
 from model.training import save_state
+from utils.utils import batch2dict
 import tqdm
 import torch
 from transformers import BertModel
@@ -219,8 +220,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             for p in self.bert.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.bert = self.bert.cuda()
         except Exception as e:
-            logger.error(f"Failed BERT load {self.bert_path}: {e}")
-            self.bert = None
+            raise RuntimeError("BERT backbone could not be loaded") from e
         self.model_size = "base";
         mae_cp = f'./model_weights/mae_pretrain_vit_{self.model_size}.pth'
         try:
@@ -232,12 +232,11 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
                 lr_msg = self.image_model.load_state_dict(sd, strict=False)
                 logger.info(f"MAE load result: {lr_msg}")
             else:
-                logger.warning(f"MAE checkpoint not found {mae_cp}. Random init.")
+                raise FileNotFoundError("MAE checkpoint is missing: " + mae_cp)
             for p in self.image_model.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.image_model = self.image_model.cuda()
         except Exception as e:
-            logger.exception(f"Failed MAE load: {e}")
-            self.image_model = None
+            raise RuntimeError("MAE backbone could not be loaded") from e
         try:
             logger.info(f"Loading CLIP: {self.clip_path}")
             self.clip_model, _ = load_from_name(self.clip_path, device="cuda" if self.use_cuda else "cpu", download_root=cache_directory('clip'))
@@ -245,8 +244,7 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
             for p in self.clip_model.parameters(): p.requires_grad_(False)
             if self.use_cuda: self.clip_model = self.clip_model.cuda()
         except Exception as e:
-            logger.error(f"Failed CLIP load {self.clip_path}: {e}")
-            self.clip_model = None
+            raise RuntimeError("CLIP backbone could not be loaded") from e
 
         fk = {1: 320}  # e.g. use one conv with kernel_size=1, output 320 features
 
@@ -325,41 +323,23 @@ class MultiDomainPLEFENDModel(torch.nn.Module):
         batch_size = inputs.shape[0]
         device = inputs.device
 
-        text_feature_seq, image_feature_seq, clip_image_embed, clip_text_embed = None, None, None, None
-
-        if self.bert:
-            try:
-                bert_outputs = self.bert(input_ids=inputs, attention_mask=masks)
-                text_feature_seq = bert_outputs.last_hidden_state
-            except Exception as e:
-                logger.error(f"BERT error: {e}")
-                text_feature_seq = torch.zeros(batch_size, self.text_token_len_expected, self.unified_dim,
-                                               device=device)
-        else:
-            text_feature_seq = torch.zeros(batch_size, self.text_token_len_expected, self.unified_dim, device=device)
-
-        if self.image_model:
-            try:
-                image_feature_seq = self.image_model.forward_ying(image_for_mae)
-            except Exception as e:
-                logger.error(f"MAE error: {e}")
-                image_feature_seq = torch.zeros(batch_size, self.image_token_len_expected, self.unified_dim,
-                                                device=device)
-        else:
-            image_feature_seq = torch.zeros(batch_size, self.image_token_len_expected, self.unified_dim, device=device)
-
-        clip_output_dim = 512
-        if self.clip_model:
-            try:
-                with torch.no_grad():
-                    clip_img_out = self.clip_model.encode_image(clip_pixel_values)
-                    clip_image_embed = clip_img_out / (clip_img_out.norm(dim=-1, keepdim=True) + 1e-8)
-                    clip_txt_out = self.clip_model.encode_text(clip_input_ids)
-                    clip_text_embed = clip_txt_out / (clip_txt_out.norm(dim=-1, keepdim=True) + 1e-8)
-            except Exception as e:
-                logger.error(f"CLIP error: {e}")
-        if clip_image_embed is None: clip_image_embed = torch.zeros(batch_size, clip_output_dim, device=device)
-        if clip_text_embed is None: clip_text_embed = torch.zeros(batch_size, clip_output_dim, device=device)
+        try:
+            bert_outputs = self.bert(input_ids=inputs, attention_mask=masks)
+            text_feature_seq = bert_outputs.last_hidden_state
+        except Exception as e:
+            raise RuntimeError("BERT forward failed") from e
+        try:
+            image_feature_seq = self.image_model.forward_ying(image_for_mae)
+        except Exception as e:
+            raise RuntimeError("MAE forward failed") from e
+        try:
+            with torch.no_grad():
+                clip_img_out = self.clip_model.encode_image(clip_pixel_values)
+                clip_image_embed = clip_img_out / (clip_img_out.norm(dim=-1, keepdim=True) + 1e-8)
+                clip_txt_out = self.clip_model.encode_text(clip_input_ids)
+                clip_text_embed = clip_txt_out / (clip_txt_out.norm(dim=-1, keepdim=True) + 1e-8)
+        except Exception as e:
+            raise RuntimeError("CLIP forward failed") from e
 
         text_atn_feature = self.text_attention(text_feature_seq, masks)
         image_atn_feature, _ = self.image_attention(image_feature_seq)
@@ -481,7 +461,7 @@ class Trainer():
             avg_loss = Averager()
             for step_n, batch in enumerate(train_data_iter):
                 try:
-                    batch_data = clipdata2gpu(batch)
+                    batch_data = clipdata2gpu(batch) if self.use_cuda else batch2dict(batch)
                     if batch_data is None:
                         raise ValueError('Training batch could not be transferred')
                     label = batch_data.get('label')
@@ -495,8 +475,12 @@ class Trainer():
                     loss2 = loss_fn(image_logits, label.float())
                     loss3 = loss_fn(fusion_logits, label.float())
                     loss = loss0 + (loss1 + loss2 + loss3) / 3.0
+                    if not torch.isfinite(loss).all():
+                        raise FloatingPointError('Training loss is nonfinite')
                     optimizer.zero_grad();
                     loss.backward();
+                    if any(p.grad is not None and not torch.isfinite(p.grad).all() for p in self.model.parameters()):
+                        raise FloatingPointError('Training gradient is nonfinite')
                     optimizer.step()
                     avg_loss.add(loss.item())
                     train_data_iter.set_description(f"Epoch {epoch + 1}/{self.epoches}")
@@ -592,10 +576,12 @@ class Trainer():
         # Score every held-out batch with frozen model parameters.
         with torch.no_grad():
             for batch in tqdm.tqdm(dataloader, desc='Testing'):
-                data = clipdata2gpu(batch)
+                data = clipdata2gpu(batch) if self.use_cuda else batch2dict(batch)
                 if data is None or data.get('label') is None or data.get('category') is None:
                     raise ValueError('Evaluation batch requires labels and categories')
                 logits, _, _, _ = self.model(**data)
+                if not torch.isfinite(logits).all():
+                    raise ValueError('Evaluation produced nonfinite logits')
                 probabilities = torch.sigmoid(logits)
                 if not torch.isfinite(probabilities).all():
                     raise ValueError('Evaluation produced nonfinite probabilities')

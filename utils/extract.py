@@ -17,7 +17,7 @@ ROOTS = {'weibo': 'data', 'weibo21': 'weibo21', 'finefake': 'FineFake'}
 
 def encode_split(split, clip_preprocess, mae_transform, root='FineFake', dataset='finefake', view='both'):
     base = Path(root)
-    if base.is_absolute() or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
+    if base.is_absolute() or str(root).startswith(("/", "\\")) or ntpath.isabs(str(root)) or ntpath.splitdrive(str(root))[0]:
         raise ValueError('Image dataset root must be relative')
     if dataset not in ROOTS or split not in ('train', 'val', 'test') or view not in ('mae', 'clip', 'both'):
         raise ValueError('Unknown dataset, split, or preprocessing view')
@@ -42,7 +42,7 @@ def encode_split(split, clip_preprocess, mae_transform, root='FineFake', dataset
         photo = None
         if isinstance(value, str) and value.strip():
             if dataset == 'finefake':
-                if ntpath.isabs(value) or ntpath.splitdrive(value)[0]:
+                if value.startswith(("/", "\\")) or ntpath.isabs(value) or ntpath.splitdrive(value)[0]:
                     raise ValueError('Image annotation paths must be relative')
                 path = base / value
             else:

@@ -281,6 +281,18 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b'previous')
 
 class FeatureTests(unittest.TestCase):
+    def test_rooted_paths_are_rejected_by_direct_file_helpers(self):
+        from utils.features import metadata_hash
+        from utils.extract import encode_split
+        from utils.fsplit import prepare
+        from utils.official import verify_files
+        from utils.partition import audit_files
+        operations = (metadata_hash, lambda path: save_features(path, torch.zeros(1, 3, 2, 2), "data/train.csv"), lambda path: read_features(path, [0], 1), lambda path: save_state(torch.nn.Linear(1, 1), path), lambda path: encode_split("train", None, None, root=path), prepare, lambda path: verify_files("weibo", {}, path), lambda path: audit_files({"train": path}))
+        for path in ("".join(("/", "outside")), "".join(("\\", "outside"))):
+            for operation in operations:
+                with self.subTest(path=path, operation=operation), self.assertRaisesRegex(ValueError, "relative"):
+                    operation(path)
+
     def test_image_preprocessing_writes_bound_caches_under_a_custom_root(self):
         from PIL import Image
         from torchvision.transforms import ToTensor
@@ -406,6 +418,38 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(binary_labels([0, 1]).tolist(), [0, 1])
 
 class InterfaceTests(unittest.TestCase):
+    def test_all_masked_attention_has_zero_output_and_finite_gradients(self):
+        from model.layers import MaskAttention, Attention
+        for operation in ("pool", "attention"):
+            values = torch.randn(2, 3, 4, requires_grad=True)
+            if operation == "pool":
+                result = MaskAttention(4)(values, torch.zeros(2, 3))
+            else:
+                result, weights = Attention()(values, values, values, torch.zeros(2, 3, 3))
+                self.assertEqual(torch.count_nonzero(weights).item(), 0)
+            self.assertEqual(torch.count_nonzero(result).item(), 0)
+            result.sum().backward()
+            self.assertTrue(torch.isfinite(values.grad).all())
+
+    def test_masked_attention_ignores_padded_tokens(self):
+        from model.layers import MaskAttention
+        layer = MaskAttention(4)
+        values = torch.randn(2, 3, 4)
+        expected = layer(values, torch.ones(2, 3))
+        padded = torch.cat((values, torch.full((2, 2, 4), 100.0)), dim=1)
+        actual = layer(padded, torch.tensor([[1, 1, 1, 0, 0]]).expand(2, -1))
+        torch.testing.assert_close(actual, expected)
+
+    def test_driver_rejects_absolute_and_invalid_paths_before_reading_data(self):
+        from run import Run
+        config = dict.fromkeys(("use_cuda", "lr", "batchsize", "emb_dim", "max_len", "num_workers", "vocab_file", "early_stop", "bert", "seed", "weight_decay", "epoch", "save_param_dir"))
+        config.update({"model_name": "DDIN", "emb_type": "bert", "dataset": "finefake", "model": {"mlp": {"dims": [4], "dropout": 0.1}}})
+        invalid = ("".join(("C", ":", "/", "outside")), "".join(("/", "outside")), " ", 123)
+        for key in ("root_path", "official_root", "vocab_file", "bert", "save_param_dir", "finefake_train", "finefake_val", "finefake_test"):
+            for value in invalid:
+                with self.subTest(field=key, value=value), self.assertRaisesRegex(ValueError, "relative"):
+                    Run({**config, key: value})
+
     def test_custom_relative_dataset_root_is_used(self):
         from run import Run
         config = dict.fromkeys(('use_cuda', 'lr', 'batchsize', 'emb_dim', 'max_len', 'num_workers', 'vocab_file', 'early_stop', 'bert', 'seed', 'weight_decay', 'epoch', 'save_param_dir'))
@@ -431,7 +475,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertIn('--dataset', result.stdout)
 
     def test_invalid_cli_values_fail_before_loading_data(self):
-        for arguments in (['--epoch', '0'], ['--lr', 'nan'], ['--emb_type', 'w2v'], ['--seed', '-1']):
+        for arguments in (['--epoch', '0'], ['--lr', 'nan'], ['--emb_type', 'w2v'], ['--seed', '-1'], ['--max_len', '1'], ['--bert_emb_dim', '9'], ['--save_param_dir', ''.join(('C', ':', '/', 'outside'))]):
             result = subprocess.run([sys.executable, '-B', 'main.py', *arguments], capture_output=True, text=True)
             self.assertEqual(result.returncode, 2, result.stderr)
             self.assertIn('error:', result.stderr)

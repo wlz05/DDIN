@@ -17,7 +17,7 @@ def binary_labels(values):
     return torch.tensor(labels.astype(np.int64), dtype=torch.long)
 
 def metadata_hash(path):
-    if not isinstance(path, (str, os.PathLike)) or not str(path).strip() or Path(path).is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
+    if not isinstance(path, (str, os.PathLike)) or not str(path).strip() or Path(path).is_absolute() or str(path).startswith(("/", "\\")) or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
         raise ValueError('Metadata path must be a nonempty relative path')
     digest = hashlib.sha256()
     with open(path, 'rb') as stream:
@@ -27,7 +27,7 @@ def metadata_hash(path):
 
 def save_features(path, values, metadata, view=None):
     target = Path(path)
-    if target.is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0] or target.resolve() == Path(metadata).resolve():
+    if target.is_absolute() or str(path).startswith(("/", "\\")) or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0] or target.resolve() == Path(metadata).resolve():
         raise ValueError('Feature output must be relative and differ from its metadata')
     if view not in (None, 'mae', 'clip'):
         raise ValueError('Unknown image cache view')
@@ -68,7 +68,7 @@ def clip_tokens(texts, tokenizer):
     return tokens
 
 def read_features(path, indices, total_rows, metadata=None, require_binding=False, view=None):
-    if not isinstance(path, (str, os.PathLike)) or not str(path).strip() or Path(path).is_absolute() or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
+    if not isinstance(path, (str, os.PathLike)) or not str(path).strip() or Path(path).is_absolute() or str(path).startswith(("/", "\\")) or ntpath.isabs(str(path)) or ntpath.splitdrive(str(path))[0]:
         raise ValueError('Image cache path must be a nonempty relative path')
     rows = np.asarray(indices)
     if type(total_rows) is not int or total_rows < 1 or rows.ndim != 1 or rows.dtype.kind not in 'iu' or not len(rows):

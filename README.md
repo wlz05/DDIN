@@ -174,7 +174,7 @@ Key dependencies:
 
 ## Reproducibility
 
-The experiment machine has **8 NVIDIA GeForce RTX 4090 GPUs**. Training uses seeds **42, 52, 3047, and 3407**. The default training seed is 42. Each command selects its GPU through `--gpu`.
+The experiment machine has **8 NVIDIA GeForce RTX 4090 GPUs**. The default experiment runs **four seeds: 42, 52, 3047, and 3407** sequentially. Use `--seeds 42 52 3047 3407` explicitly for the same complete grid, or `--seed 42` for a single run. Each command selects its GPU through `--gpu`.
 
 ```bash
 python -B main.py --dataset weibo21 --gpu 0 --seed 42
@@ -184,6 +184,12 @@ python -B main.py --dataset weibo21 --gpu 0 --seed 3407
 ```
 
 Dataset partitions remain fixed across training seeds. FineFake uses partition seed 3407.
+
+```bash
+python -B main.py --dataset weibo21 --gpu 0 --seeds 42 52 3047 3407
+```
+
+Each seed trains independently, selects its checkpoint on validation, and evaluates that checkpoint on the complete test partition. Checkpoints and `result.json` use `./param_model/seed<seed>/<model_name>/`; `./param_model/summary.json` retains each seed's metrics in `byseed` and their equally weighted arithmetic means in `metrics[metric].mean`. `sample_std` uses the four seed results with denominator three. For every metric, the final mean is `(score42 + score52 + score3047 + score3407) / 4`. Predictions are not pooled or ensembled before metric calculation. A missing seed aborts the summary; a metric undefined for any seed has an undefined mean. Annotation hashes must stay identical across seeds. A custom `--save_param_dir` changes the common output root.
 
 ## Pretrained Models
 
@@ -269,7 +275,8 @@ python main.py --dataset finefake --model_name Gossip --epoch 50 --batchsize 64 
 | `--gpu` | `0` | GPU device ID |
 | `--emb_type` | `bert` | BERT tokenization |
 | `--early_stop` | `5` | Early stopping patience (epochs) |
-| `--seed` | `42` | Training seed; experimental seeds: 42, 52, 3047, 3407 |
+| `--seeds` | `42 52 3047 3407` | Independent training runs and equal-weight seed-metric aggregation |
+| `--seed` | unset | Run one explicit seed instead of the default four-seed experiment |
 | `--bert_emb_dim` | `768` | BERT embedding dimension |
 
 The AdamW weight decay is **0.01** in the training configuration. Text preparation uses a maximum of **128 tokens**; CLIP follows its encoder context limit.
