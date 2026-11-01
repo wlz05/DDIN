@@ -183,6 +183,8 @@ python -B main.py --dataset weibo21 --gpu 0 --seed 3047
 python -B main.py --dataset weibo21 --gpu 0 --seed 3407
 ```
 
+The commands above are independent single-seed runs. Each invocation replaces the common `summary.json` with its own seed summary; it does not collect results from earlier invocations. Use the complete-grid command below to produce the four-seed aggregate in one invocation.
+
 Dataset partitions remain fixed across training seeds. FineFake uses partition seed 3407.
 
 ```bash
