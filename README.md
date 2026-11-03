@@ -2,7 +2,7 @@
 
 **DDIN** detects multimodal fake news through domain-aware disentanglement and interaction between text and image features. DDIN is accepted by [WISE 2026](https://conferences.sigappfr.org/wise2026/) (Research Paper).
 
-Designed for fake news detection on multiple multimodal datasets including Weibo (9 domains), Weibo-21 (9 domains), and FineFake (7 domains).
+Designed for fake news detection on multiple multimodal datasets including Weibo (9 domains), Weibo21 (9 domains), and FineFake (7 domains).
 
 ---
 
@@ -153,9 +153,15 @@ DDIN/
 
 ### Installation
 
+Clone the repository and install dependencies with the Python interpreter used for training:
+
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/wlz05/DDIN.git
+cd DDIN
+python -m pip install -r requirements.txt
 ```
+
+If you already have the checkout, enter its root and run only the installation command. All remaining commands use paths relative to that root.
 
 Key dependencies:
 
@@ -219,12 +225,7 @@ mkdir -p ./model_weights/clip_cn/
 # cn_clip will auto-download on first use, or specify the path manually
 ```
 
-### 4. Word Vectors (Optional, w2v mode &#8212; dataset-dependent)
-
-```bash
-# Tencent AI Lab Chinese word vectors
-# Place at: ./pretrained_model/w2v/
-```
+The training entry point supports BERT tokenization only (`--emb_type bert`); separate word-vector files are not required.
 
 Model downloads use `./model_weights/huggingface` for Hugging Face assets, `./model_weights/clip_cn/` for Chinese-CLIP, and `./model_weights/checkpoints` for PyTorch checkpoints. Keep these directories with the project when moving an experiment to another machine. Model caches are excluded from Git.
 
