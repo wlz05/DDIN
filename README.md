@@ -8,27 +8,16 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────
-│                   DDIN Architecture
-├──────────────────────────────────────────────────────────
-│  (a) Dual-Stream Multi-Granularity Feature Extraction
-│      BERT (text local) + MAE (image local)
-│      + CLIP (text-image global)
-│                         ↓
-│  (b) Multi-Scale Semantic Projection
-│                         ↓
-│  (c) Multi-Granularity Cross-Modal Inconsistency Mining
-│      ├── Global-Global Inconsistency
-│      ├── Global-Local Inconsistency
-│      └── Local-Local Inconsistency (Cross-Attention)
-│                         ↓
-│  (d) Hierarchical Conflict Synergy Network
-│                         ↓
-│  (e) Domain-Adaptive Inconsistency Weighting
-│                         ↓
-│  (f) Multimodal Global Fusion → Classifier
-└──────────────────────────────────────────────────────────
+```mermaid
+flowchart TD
+    A["(a) Dual-Stream Multi-Granularity Feature Extraction<br/>BERT: text local; MAE: image local<br/>CLIP: text-image global"]
+    B["(b) Multi-Scale Semantic Projection"]
+    C["(c) Multi-Granularity Cross-Modal Inconsistency Mining<br/>Global-Global Inconsistency<br/>Global-Local Inconsistency<br/>Local-Local Inconsistency: Cross-Attention"]
+    D["(d) Hierarchical Conflict Synergy Network"]
+    E["(e) Domain-Adaptive Inconsistency Weighting"]
+    F["(f) Multimodal Global Fusion"]
+    G["Classifier"]
+    A --> B --> C --> D --> E --> F --> G
 ```
 
 ### Key Contributions
