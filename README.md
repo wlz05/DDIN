@@ -9,6 +9,12 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 ## Architecture
 
 ```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 560
+    rankSpacing: 24
+---
 flowchart TD
     A["(a) Dual-Stream Multi-Granularity Feature Extraction<br/>BERT: text local; MAE: image local<br/>CLIP: text-image global"]
     B["(b) Multi-Scale Semantic Projection"]
