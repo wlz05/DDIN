@@ -513,16 +513,18 @@ class InterfaceTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, result.stderr)
             self.assertIn('error:', result.stderr)
 
-    def test_forward_supports_custom_width_and_half_precision_clip_embeddings(self):
+    def ddin(self):
         class TextBackbone(torch.nn.Module):
             def forward(self, content, **kwargs):
-                return SimpleNamespace(last_hidden_state=torch.ones(*content.shape, 768))
+                basis = torch.linspace(-1, 1, 768, device=content.device)
+                return SimpleNamespace(last_hidden_state=torch.sin(content[..., None].float() * basis))
         class ImageBackbone(torch.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.weight = torch.nn.Parameter(torch.ones(1))
             def forward_encoder(self, image, **kwargs):
-                return (torch.ones(len(image), 2, 768),)
+                patches = torch.cos(torch.arange(3, device=image.device)[:, None] + torch.linspace(-1, 1, 768, device=image.device))
+                return (patches.unsqueeze(0).expand(len(image), -1, -1),)
         class ClipBackbone(torch.nn.Module):
             def encode_text(self, values):
                 return torch.ones(len(values), 512, dtype=torch.float16)
@@ -534,6 +536,10 @@ class InterfaceTests(unittest.TestCase):
         modules['timm.models.vision_transformer'].Block = lambda **kwargs: torch.nn.Identity()
         with patch.dict(sys.modules, modules), patch('model.net.torch.load', return_value={'model': {}}), patch.object(modules['cn_clip.clip'], 'load_from_name', create=True, return_value=(ClipBackbone(), None)) as loader:
             model = DDIN('unused', 'weights/mae.pt', 'ViT-B-16', num_domains=1, hidden_dim=8).eval()
+        return model, loader, modules
+
+    def test_forward_supports_custom_width_and_half_precision_clip_embeddings(self):
+        model, loader, modules = self.ddin()
         with torch.no_grad():
             result = model(torch.ones(1, 3, dtype=torch.long), torch.ones(1, 3), torch.zeros(1, 3, 4, 4), torch.zeros(1, dtype=torch.long))
         self.assertEqual(result[0].shape, (1, 2))
@@ -541,6 +547,54 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(loader.call_args.kwargs['device'], 'cpu')
         self.assertEqual(modules['transformers'].BertModel.from_pretrained.call_args.kwargs['cache_dir'], './model_weights/huggingface')
         self.assertFalse(any(value.requires_grad for value in model.mae.parameters()))
+
+    def test_ddin_predictions_ignore_padded_text_queries(self):
+        with torch.random.fork_rng():
+            torch.manual_seed(42)
+            model = self.ddin()[0]
+        content = torch.tensor([[1, 2, 3], [4, 5, 6]])
+        masks = torch.ones_like(content)
+        images, categories = torch.zeros(2, 3, 4, 4), torch.zeros(2, dtype=torch.long)
+        padding = torch.tensor([[11, 13, 17], [19, 23, 29]])
+        with torch.no_grad():
+            expected = model(content, masks, images, categories)
+            actual = model(torch.cat((content, padding), dim=1), torch.cat((masks, torch.zeros_like(padding)), dim=1), images, categories)
+        for first, second in zip(actual, expected):
+            torch.testing.assert_close(first, second, rtol=1e-5, atol=1e-6)
+
+    def test_ddin_empty_text_masks_have_zero_local_evidence_and_finite_gradients(self):
+        model = self.ddin()[0]
+        observed = {}
+        def capture(name):
+            def record(module, inputs):
+                observed[name] = inputs[0].detach().clone()
+            return record
+        first = model.text_local_proj.register_forward_pre_hook(capture('text'))
+        second = model.ll_inconsistency.register_forward_pre_hook(capture('local'))
+        try:
+            result = model(torch.ones(2, 3, dtype=torch.long), torch.zeros(2, 3), torch.zeros(2, 3, 4, 4), torch.zeros(2, dtype=torch.long))
+        finally:
+            first.remove()
+            second.remove()
+        self.assertEqual(torch.count_nonzero(observed['text']).item(), 0)
+        self.assertEqual(torch.count_nonzero(observed['local']).item(), 0)
+        self.assertTrue(all(torch.isfinite(value).all() for value in result))
+        result[0].sum().backward()
+        self.assertTrue(all(torch.isfinite(value.grad).all() for value in model.parameters() if value.grad is not None))
+
+    def test_ddin_rejects_malformed_masks_before_backbone_inference(self):
+        model = self.ddin()[0]
+        invalid = (None, torch.ones(2, 2), torch.ones(2, 3, 1), torch.full((2, 3), 0.5), torch.full((2, 3), float('nan')), torch.ones(2, 3, dtype=torch.complex64))
+        for mask in invalid:
+            with self.subTest(mask=mask), patch.object(model.bert, 'forward', wraps=model.bert.forward) as forward:
+                with self.assertRaisesRegex(ValueError, 'mask'):
+                    model(torch.ones(2, 3, dtype=torch.long), mask, torch.zeros(2, 3, 4, 4), torch.zeros(2, dtype=torch.long))
+                forward.assert_not_called()
+        for shape in ((0, 3), (2, 0)):
+            with self.subTest(shape=shape), patch.object(model.bert, 'forward', wraps=model.bert.forward) as forward:
+                with self.assertRaisesRegex(ValueError, 'mask'):
+                    model(torch.ones(shape, dtype=torch.long), torch.ones(shape), torch.zeros(shape[0], 3, 4, 4), torch.zeros(shape[0], dtype=torch.long))
+                forward.assert_not_called()
 
 class PartitionTests(unittest.TestCase):
     def frame(self, count=30):

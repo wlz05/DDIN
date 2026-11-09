@@ -303,6 +303,8 @@ Create MAE and CLIP image tensors independently for `train`, `val`, and `test`. 
 
 Preprocessing uses fixed image transforms and normalization constants. BERT, MAE, and CLIP encode the inputs inside the model. The caches contain preprocessed images; preprocessing loads no learned statistics from the dataset. CLIP images use the [Chinese-CLIP transform](https://github.com/OFA-Sys/Chinese-CLIP/blob/master/cn_clip/clip/utils.py).
 
+DDIN uses the binary BERT attention mask for local text pooling and both directions of local-local conflict aggregation. Padded queries contribute no attention evidence or averaging weight. An entirely masked text sequence contributes zero local input statistics; the remaining learned projections and image/global branches retain their normal behavior. Malformed masks fail before backbone inference.
+
 ### 3. Training Samples
 
 The training loader draws only from `train`, with shuffling enabled. Validation and test loaders preserve their sample order and include the final partial batch. Valid text rows retain their original label, domain, and image alignment. The DDIN driver applies FGM during optimization and maintains EMA model weights. Training seeds change model initialization and training order while the three annotation files remain fixed.

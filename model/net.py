@@ -146,6 +146,11 @@ class DDIN(nn.Module):
         self.text_classifier = nn.Linear(hidden_dim, num_classes)
 
     def forward(self, content, content_masks, image, category, **kwargs):
+        if (not isinstance(content_masks, torch.Tensor) or content_masks.ndim != 2 or not content_masks.numel()
+                or content_masks.shape != content.shape or content_masks.is_complex()
+                or not torch.all((content_masks == 0) | (content_masks == 1))):
+            raise ValueError('Text mask must be a binary matrix aligned with the token input')
+        text_mask = content_masks.bool()
         clip_text = kwargs.get('clip_text', content)
         clip_image = kwargs.get('clip_image', image)
 
@@ -159,7 +164,10 @@ class DDIN(nn.Module):
         text_global = self.clip_model.encode_text(clip_text)
         image_global = self.clip_model.encode_image(clip_image)
 
-        text_local_proj = self.text_local_proj(text_local.mean(dim=1))
+        text_count = text_mask.sum(dim=1).clamp_min(1)
+        # Exclude padded text positions from local evidence.
+        text_local_mean = text_local.masked_fill(~text_mask.unsqueeze(-1), 0).sum(dim=1) / text_count.unsqueeze(-1)
+        text_local_proj = self.text_local_proj(text_local_mean)
         image_local_proj = self.image_local_proj(image_local.mean(dim=1))
         # Match pretrained embedding precision to the trainable projections.
         text_global_proj = self.text_global_proj(text_global.to(self.text_global_proj.fusion.weight.dtype))
@@ -175,9 +183,10 @@ class DDIN(nn.Module):
         _, attn_weights = self.ll_cross_attn(
             self.text_attention_proj(text_local), self.image_attention_proj(image_local), self.image_attention_proj(image_local)
         )
+        attn_weights = attn_weights.masked_fill(~text_mask.unsqueeze(-1), 0)
         row_max = attn_weights.max(dim=-1)[0]
         col_max = attn_weights.max(dim=-2)[0]
-        ll_features = torch.stack([row_max.mean(dim=1), col_max.mean(dim=1)], dim=1)
+        ll_features = torch.stack([row_max.sum(dim=1) / text_count, col_max.mean(dim=1)], dim=1)
         conflict_ll = self.ll_inconsistency(ll_features.unsqueeze(-1)).squeeze(-1)
 
         gl_concat = torch.stack([text_global_proj, image_local_proj], dim=1)
