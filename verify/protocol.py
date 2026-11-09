@@ -205,6 +205,26 @@ class ProtocolTests(unittest.TestCase):
         with workspace() as root, self.assertRaisesRegex(FileNotFoundError, 'reference partition'):
             verify_files('weibo', {'train': root / 'train.csv'}, root)
 
+    def test_official_checks_reject_missing_released_rows(self):
+        with workspace() as root:
+            path = root / 'train.csv'
+            frame = pd.DataFrame({'post_id': ['first', 'second'], 'content': ['first', 'second'], 'label': [0, 1]})
+            frame.iloc[:1].to_csv(path, index=False)
+            (root / 'train_id.pickle').write_bytes(pickle.dumps(['first', 'second']))
+            with self.assertRaisesRegex(ValueError, 'released train'):
+                verify_files('weibo', {'train': path}, root)
+            frame.to_pickle(root / 'train.pkl')
+            with self.assertRaisesRegex(ValueError, 'released train'):
+                verify_files('weibo21', {'train': path}, root)
+
+    def test_weibo21_applies_the_upstream_undetermined_category_filter(self):
+        with workspace() as root:
+            path = root / 'train.csv'
+            frame = pd.DataFrame({'content': ['included', 'excluded'], 'label': [0, 1], 'category': ['Technology', 'cannot determine']})
+            frame.to_pickle(root / 'train.pkl')
+            frame.iloc[:1].to_csv(path, index=False)
+            self.assertEqual(set(verify_files('weibo21', {'train': path}, root)), {'train'})
+
     def test_bound_caches_require_the_requested_preprocessing_view(self):
         with workspace() as root:
             metadata, cache = root / 'train.csv', root / 'cache.pkl'

@@ -29,16 +29,22 @@ def verify_files(dataset, paths, source_root):
                 raise ValueError('Weibo annotations must preserve the released post IDs')
             allowed = {item.decode('ascii') if isinstance(item, bytes) else str(item) for item in reference}
             actual = frame['post_id'].astype(str).tolist()
-            if len(set(actual)) != len(actual) or not set(actual).issubset(allowed):
+            if len(set(actual)) != len(actual) or set(actual) != allowed:
                 raise ValueError('Prepared rows differ from the released ' + name + ' IDs')
         else:
             if not isinstance(reference, pd.DataFrame) or not {'content', 'label'}.issubset(reference):
                 raise ValueError('MDFEND reference partitions must be annotation DataFrames')
             if not {'content', 'label'}.issubset(frame):
                 raise ValueError('Prepared Weibo21 rows require content and label')
+            # Apply the upstream undetermined-category filter before matching all rows.
+            unknown = {'cannotdetermine', 'undetermined', '\u65e0\u6cd5\u786e\u5b9a'}
+            if 'category' in reference:
+                reference = reference[~reference['category'].map(normalized_text).isin(unknown)]
+            if 'category' in frame:
+                frame = frame[~frame['category'].map(normalized_text).isin(unknown)]
             allowed = Counter((normalized_text(text), int(label)) for text, label in zip(reference['content'], reference['label']))
             actual = Counter((normalized_text(text), int(label)) for text, label in zip(frame['content'], frame['label']))
-            if actual - allowed:
+            if actual != allowed:
                 raise ValueError('Prepared rows differ from the released ' + name + ' annotations')
         signatures[name] = metadata_hash(source)
     return signatures

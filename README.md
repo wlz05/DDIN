@@ -293,7 +293,9 @@ The AdamW weight decay is **0.01** in the training configuration. Text preparati
 
 The [EANN preprocessing code](https://github.com/yaqingwang/EANN-KDD18/blob/master/src/process_data_weibo.py) selects Weibo membership by post ID. Keep `post_id` in the prepared CSVs. The [MDFEND loader](https://github.com/kennqiang/MDFEND-Weibo21/blob/main/utils/dataloader.py) reads its three released DataFrames and filters the undetermined category. Prepare Weibo21 annotations from the corresponding released subset, retaining content and labels while mapping the nine named domains to the English category names below. Put the reference pickles in the dataset root, or select their directory with `--official_root`. Training compares the prepared rows with these references before initializing a backbone.
 
-The [FineFake paper, Section VI-B](https://arxiv.org/html/2404.01336#S6.SS2), specifies the classification ratio and a fixed random seed. `utils/fsplit.py` uses reproducible stratified 60/20/20 row partitions with seed 3407. Prepare the CSVs once and use the same files for all four training seeds. Weibo and Weibo21 retain **0 = real, 1 = fake**; FineFake retains **0 = fake, 1 = real**.
+The [FineFake paper, Section VI-B](https://arxiv.org/html/2404.01336#S6.SS2), specifies the classification ratio and a fixed random seed without publishing seed 3407 as its membership definition. `utils/fsplit.py` reconstructs stratified 60/20/20 row partitions with this repository's seed 3407. Prepare the CSVs once and use the same files for all four training seeds. Weibo and Weibo21 retain **0 = real, 1 = fake**; FineFake retains **0 = fake, 1 = real**.
+
+Official Weibo IDs and Weibo21 annotation multiplicities must match their complete released partitions; matching a selected subset is insufficient. Weibo21 applies the upstream undetermined-category filter before matching. The audit rejects cross-partition text, image and source identities without moving or dropping rows. A supplied partition that fails the audit stops before training.
 
 ### 2. Image Caches
 
