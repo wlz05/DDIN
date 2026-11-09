@@ -194,6 +194,8 @@ python -B main.py --dataset weibo21 --gpu 0 --seeds 42 52 3047 3407
 
 Each seed trains independently, selects its checkpoint on validation, and evaluates that checkpoint on the complete test partition. Checkpoints and `result.json` use `./param_model/seed<seed>/<model_name>/`; `./param_model/summary.json` retains each seed's metrics in `byseed` and their equally weighted arithmetic means in `metrics[metric].mean`. `sample_std` uses the four seed results with denominator three. For every metric, the final mean is `(score42 + score52 + score3047 + score3407) / 4`. Predictions are not pooled or ensembled before metric calculation. A missing seed aborts the summary; a metric undefined for any seed has an undefined mean. Annotation hashes must stay identical across seeds. A custom `--save_param_dir` changes the common output root.
 
+Every seed supplies the same metric paths with finite numeric values or explicit `null`. Missing fields, ambiguous flattened names, empty mappings, Boolean values and numeric strings stop aggregation. An explicit `null`, such as AUC for a single-class subset, preserves the metric and records its undefined seeds without averaging the remaining values.
+
 ## Pretrained Models
 
 The following pretrained models are required before training:
@@ -294,6 +296,8 @@ The AdamW weight decay is **0.01** in the training configuration. Text preparati
 The [EANN preprocessing code](https://github.com/yaqingwang/EANN-KDD18/blob/master/src/process_data_weibo.py) selects Weibo membership by post ID. Keep `post_id` in the prepared CSVs. The [MDFEND loader](https://github.com/kennqiang/MDFEND-Weibo21/blob/main/utils/dataloader.py) reads its three released DataFrames and filters the undetermined category. Prepare Weibo21 annotations from the corresponding released subset, retaining content and labels while mapping the nine named domains to the English category names below. Put the reference pickles in the dataset root, or select their directory with `--official_root`. Training compares the prepared rows with these references before initializing a backbone.
 
 The [FineFake paper, Section VI-B](https://arxiv.org/html/2404.01336#S6.SS2), specifies the classification ratio and a fixed random seed without publishing seed 3407 as its membership definition. `utils/fsplit.py` reconstructs stratified 60/20/20 row partitions with this repository's seed 3407. Prepare the CSVs once and use the same files for all four training seeds. Weibo and Weibo21 retain **0 = real, 1 = fake**; FineFake retains **0 = fake, 1 = real**.
+
+FineFake preparation retains every input row, including missing or whitespace-only text, and preserves its label, source identifiers and original index during partitioning. Missing text becomes an empty string. The source pickle remains unchanged; the resulting CSVs retain the complete input membership for all training seeds.
 
 Official Weibo IDs and Weibo21 annotation multiplicities must match their complete released partitions; matching a selected subset is insufficient. Weibo21 applies the same upstream undetermined-category filter during reference matching, leakage auditing and data loading. Missing text becomes an empty string and retains its sample, label and images in every dataset. The audit rejects cross-partition text, image and source identities without reallocating eligible rows. A supplied partition that fails the audit stops before training.
 

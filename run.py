@@ -17,7 +17,7 @@ def seed_summary(records, seeds=SEEDS):
     seeds = list(seeds)
     if not seeds or len(set(seeds)) != len(seeds) or any(type(seed) is not int or not 0 <= seed < 2 ** 32 for seed in seeds):
         raise ValueError("Seeds must be distinct unsigned 32-bit integers")
-    if any(not isinstance(row, dict) or type(row.get("seed")) is not int or "metrics" not in row or not isinstance(row.get("protocol"), dict) for row in records):
+    if not isinstance(records, (list, tuple)) or any(not isinstance(row, dict) or type(row.get("seed")) is not int or not isinstance(row.get("metrics"), dict) or not row["metrics"] or not isinstance(row.get("protocol"), dict) for row in records):
         raise ValueError("Every seed result needs metrics and an experiment protocol")
     if len(records) != len(seeds) or {row["seed"] for row in records} != set(seeds):
         raise ValueError("Missing or duplicate seed results; partial averages are forbidden")
@@ -26,15 +26,30 @@ def seed_summary(records, seeds=SEEDS):
     def flatten(value, prefix=""):
         result = {}
         if isinstance(value, dict):
+            if not value:
+                raise ValueError("Seed metric mappings must not be empty")
             for key, item in value.items():
-                result.update(flatten(item, prefix + ("." if prefix else "") + str(key)))
+                if not isinstance(key, str) or not key or key != key.strip():
+                    raise ValueError("Seed metric names must be nonempty strings")
+                nested = flatten(item, prefix + ("." if prefix else "") + key)
+                if result.keys() & nested.keys():
+                    raise ValueError("Seed metric paths must be unambiguous")
+                result.update(nested)
         elif value is None or isinstance(value, (int, float)) and not isinstance(value, bool):
-            if value is not None and not math.isfinite(value):
+            try:
+                finite = value is None or math.isfinite(value)
+            except OverflowError:
+                finite = False
+            if not finite:
                 raise ValueError("Seed metrics must be finite or explicitly undefined")
             result[prefix] = value
+        else:
+            raise ValueError("Seed metrics must be numeric, null, or nested mappings")
         return result
     byseed = {str(row["seed"]): row["metrics"] for row in records}
     flat = {seed: flatten(byseed[str(seed)]) for seed in seeds}
+    if any(flat[seed].keys() != flat[seeds[0]].keys() for seed in seeds):
+        raise ValueError("All seeds must provide the same metric paths")
     metrics = {}
     for key in sorted(set().union(*(value.keys() for value in flat.values()))):
         values = [flat[seed].get(key) for seed in seeds]

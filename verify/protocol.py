@@ -41,6 +41,24 @@ class ProtocolTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 seed_summary(bad)
 
+    def test_seed_summary_rejects_invalid_metric_values_and_ambiguous_paths(self):
+        from run import SEEDS, seed_summary
+        rows = [{'seed': seed, 'metrics': {'metric': 0.5}, 'protocol': {}} for seed in SEEDS]
+        invalid = (None, [], 0.5, {}, {'metric': True}, {'metric': '0.5'}, {'metric': [0.5]}, {'metric': complex(0.5)}, {'metric': 10 ** 1000}, {'metric': float('inf')}, {'domain': {}}, {'': 0.5}, {1: 0.5}, {'domain.auc': 0.5, 'domain': {'auc': 0.6}})
+        for metric in invalid:
+            with self.subTest(metrics=metric), self.assertRaises(ValueError):
+                seed_summary([{**row, 'metrics': metric} if index == 0 else row for index, row in enumerate(rows)])
+
+    def test_seed_summary_requires_identical_metric_paths_and_preserves_explicit_nulls(self):
+        from run import SEEDS, seed_summary
+        rows = [{'seed': seed, 'metrics': {'metric': 0.5, 'auc': None if index == 0 else 0.75}, 'protocol': {}} for index, seed in enumerate(SEEDS)]
+        result = seed_summary(rows)
+        self.assertIsNone(result['metrics']['auc']['mean'])
+        self.assertEqual(result['metrics']['auc']['undefined_seeds'], [42])
+        for metrics in ({'metric': 0.5}, {'metric': 0.5, 'auc': {'mean': 0.75}}):
+            with self.subTest(metrics=metrics), self.assertRaisesRegex(ValueError, 'same metric'):
+                seed_summary([{**row, 'metrics': metrics} if index == 1 else row for index, row in enumerate(rows)])
+
     def test_seed_runner_freezes_annotations_and_isolates_outputs(self):
         from run import SEEDS, run_seeds
         with workspace() as root:

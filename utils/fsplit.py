@@ -23,7 +23,6 @@ def prepare(root='FineFake', seed=SEED):
         raise ValueError('FineFake metadata requires text and label columns')
     frame = frame.copy()
     frame['text'] = frame['text'].fillna('').astype(str)
-    frame = frame[frame['text'].str.strip().str.len() > 0].reset_index(drop=True)
     if 'image_path' not in frame:
         frame['image_path'] = ''
     if 'category' not in frame:

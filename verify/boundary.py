@@ -656,6 +656,29 @@ class PartitionTests(unittest.TestCase):
             self.assertEqual(sum(len(part) for part in result.values()), 30)
             self.assertEqual(sum(audit_files({name: root / (name + '.csv') for name in result}).values()), 30)
 
+    def test_finefake_preparation_preserves_empty_text_rows_and_source_membership(self):
+        import pandas as pd
+        from utils.fsplit import prepare
+        frame = self.frame()
+        frame.loc[1, 'text'], frame.loc[7, 'text'] = None, '  '
+        frame.index = range(100, 130)
+        frame['source_id'] = ['source-' + str(index) for index in frame.index]
+        with workspace() as root:
+            source = root / 'FineFake.pkl'
+            frame.to_pickle(source)
+            original = source.read_bytes()
+            result = prepare(root)
+            self.assertEqual([len(result[name]) for name in ('train', 'val', 'test')], [18, 6, 6])
+            actual = pd.concat(result.values()).sort_index()
+            self.assertEqual(actual.index.tolist(), frame.index.tolist())
+            self.assertEqual(actual['source_id'].tolist(), frame['source_id'].tolist())
+            self.assertEqual(actual['label'].tolist(), frame['label'].tolist())
+            self.assertEqual(actual.loc[101, 'text'], '')
+            self.assertEqual(actual.loc[107, 'text'], '  ')
+            written = pd.concat([pd.read_csv(root / (name + '.csv'), keep_default_na=False) for name in result])
+            self.assertEqual(sorted(written['source_id']), sorted(frame['source_id']))
+            self.assertEqual(source.read_bytes(), original)
+
     def test_training_audits_splits_before_loading_backbones(self):
         from run import Run
         runner = object.__new__(Run)
