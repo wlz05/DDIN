@@ -28,7 +28,7 @@ def main():
             continue
         checked += 1
         try:
-            counts = audit_files(paths, root)
+            counts = audit_files(paths, root, name)
             print('[OK] ' + name + ': disjoint text, images, and original sources; rows=' + str(counts))
         except (OSError, ValueError) as error:
             failures += 1

@@ -310,7 +310,7 @@ class FeatureTests(unittest.TestCase):
                 images = read_features(root / name, [0], 1, metadata=metadata, require_binding=True)
                 self.assertEqual(tuple(images.shape), (1, 3, 2, 2))
 
-    def test_finefake_loader_keeps_images_aligned_after_filtering(self):
+    def test_finefake_loader_preserves_missing_text_and_aligned_images(self):
         import pandas as pd
         parent, module = ModuleType('cn_clip'), ModuleType('cn_clip.clip')
         module.tokenize = lambda texts: torch.ones(len(texts), 52, dtype=torch.long)
@@ -329,8 +329,41 @@ class FeatureTests(unittest.TestCase):
             loader = loader_module.bert_data(4, 2, 'unused', {'Uncategorized': 0}, num_workers=0)
             with patch.object(loader_module, 'word2input', side_effect=tokenizer), redirect_stdout(io.StringIO()):
                 result = loader.load_data(metadata, images, clip_images, False)
-            self.assertEqual(result.dataset.tensors[4][:, 0, 0, 0].tolist(), [0, 2])
-            self.assertEqual(result.dataset.tensors[6].shape, (2, 52))
+            self.assertEqual(result.dataset.tensors[2].tolist(), [0, 1, 1])
+            self.assertEqual(result.dataset.tensors[4][:, 0, 0, 0].tolist(), [0, 1, 2])
+            self.assertEqual(result.dataset.tensors[6].shape, (3, 52))
+            self.assertEqual(loader.data['text'].tolist(), ['first', '', 'third'])
+
+    def test_weibo_loaders_preserve_eligible_membership_and_original_cache_indices(self):
+        import pandas as pd
+        parent, module = ModuleType('cn_clip'), ModuleType('cn_clip.clip')
+        module.tokenize = lambda texts: torch.ones(len(texts), 52, dtype=torch.long)
+        parent.clip = module
+        for name in ('clipld', 'social'):
+            modules = {'cn_clip': parent, 'cn_clip.clip': module, 'transformers': SimpleNamespace(BertTokenizer=Mock())}
+            with self.subTest(loader=name), patch.dict(sys.modules, modules):
+                loader_module = importlib.import_module('utils.' + name)
+                with workspace() as root:
+                    metadata = root / 'data.csv'
+                    categories = ['Technology'] * 5
+                    if name == 'social':
+                        categories[2:4] = ['cannot determine', '\u65e0\u6cd5\u786e\u5b9a']
+                    frame = pd.DataFrame({'content': ['first', None, 'excluded', 'unknown', 'last'], 'label': [0, 1, 0, 1, 0], 'category': categories})
+                    frame.to_csv(metadata, index=False)
+                    values = torch.arange(5, dtype=torch.float32)[:, None, None, None].expand(5, 3, 2, 2)
+                    images, clip_images = root / 'images.pkl', root / 'clip.pkl'
+                    save_features(images, values, metadata, view='mae')
+                    save_features(clip_images, values, metadata, view='clip')
+                    loader = loader_module.bert_data(4, 8, 'unused', {'Technology': 0}, num_workers=0)
+                    tokenizer = lambda texts, *args: (torch.ones(len(texts), 4, dtype=torch.long), torch.ones(len(texts), 4))
+                    with patch.object(loader_module.pd, 'read_excel', return_value=frame.copy()), patch.object(loader_module, 'word2input', side_effect=tokenizer), redirect_stdout(io.StringIO()):
+                        result = loader.load_data(metadata, images, clip_images, False)
+                    indices = [0, 1, 4] if name == 'social' else list(range(5))
+                    self.assertEqual(result.dataset.tensors[2].tolist(), frame.iloc[indices]['label'].tolist())
+                    for tensor in result.dataset.tensors[4:6]:
+                        self.assertEqual(tensor[:, 0, 0, 0].tolist(), indices)
+                    self.assertEqual(loader.data.index.tolist(), indices)
+                    self.assertEqual(loader.data.loc[1, 'content'], '')
 
     def test_clip_fallback_uses_the_tokenizers_context_length(self):
         def tokenize(texts):
@@ -572,6 +605,7 @@ class PartitionTests(unittest.TestCase):
     def test_training_audits_splits_before_loading_backbones(self):
         from run import Run
         runner = object.__new__(Run)
+        runner.dataset = 'weibo21'
         runner.train_path, runner.val_path, runner.test_path, runner.root_path = 'train.csv', 'val.csv', 'test.csv', '.'
         with patch('utils.partition.audit_files', side_effect=ValueError('split leakage')), patch.object(runner, 'get_dataloader') as loader:
             with self.assertRaisesRegex(ValueError, 'split leakage'):

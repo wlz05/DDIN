@@ -74,10 +74,7 @@ class bert_data():
             raise KeyError(f"[ERROR] No label column in {path}")
 
         original_len = len(self.data)
-        self.data = self.data.dropna(subset=[text_col])
         self.data[text_col] = self.data[text_col].fillna("").astype(str)
-        if len(self.data) < original_len:
-            print(f"[INFO] Dropped {original_len - len(self.data)} rows with missing content")
 
         if len(self.data) == 0:
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")

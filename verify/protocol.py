@@ -225,6 +225,17 @@ class ProtocolTests(unittest.TestCase):
             frame.iloc[:1].to_csv(path, index=False)
             self.assertEqual(set(verify_files('weibo21', {'train': path}, root)), {'train'})
 
+    def test_weibo21_leakage_audit_uses_the_same_eligible_rows_as_loading(self):
+        from utils.partition import audit_files
+        with workspace() as root:
+            paths = {}
+            for name in ('train', 'val', 'test'):
+                paths[name] = root / (name + '.csv')
+                pd.DataFrame({'content': [name, 'excluded shared text'], 'label': [0, 1], 'category': ['Technology', 'undetermined']}).to_csv(paths[name], index=False)
+            self.assertEqual(audit_files(paths, dataset='weibo21'), dict(train=1, val=1, test=1))
+            with self.assertRaisesRegex(ValueError, 'leakage'):
+                audit_files(paths)
+
     def test_bound_caches_require_the_requested_preprocessing_view(self):
         with workspace() as root:
             metadata, cache = root / 'train.csv', root / 'cache.pkl'

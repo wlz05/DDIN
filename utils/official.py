@@ -7,7 +7,7 @@ import ntpath
 from pathlib import Path
 import pandas as pd
 from utils.features import metadata_hash
-from utils.partition import normalized_text
+from utils.partition import eligible_rows, normalized_text
 
 def verify_files(dataset, paths, source_root):
     root = Path(source_root)
@@ -37,11 +37,8 @@ def verify_files(dataset, paths, source_root):
             if not {'content', 'label'}.issubset(frame):
                 raise ValueError('Prepared Weibo21 rows require content and label')
             # Apply the upstream undetermined-category filter before matching all rows.
-            unknown = {'cannotdetermine', 'undetermined', '\u65e0\u6cd5\u786e\u5b9a'}
-            if 'category' in reference:
-                reference = reference[~reference['category'].map(normalized_text).isin(unknown)]
-            if 'category' in frame:
-                frame = frame[~frame['category'].map(normalized_text).isin(unknown)]
+            reference = eligible_rows(reference, dataset)
+            frame = eligible_rows(frame, dataset)
             allowed = Counter((normalized_text(text), int(label)) for text, label in zip(reference['content'], reference['label']))
             actual = Counter((normalized_text(text), int(label)) for text, label in zip(frame['content'], frame['label']))
             if actual != allowed:

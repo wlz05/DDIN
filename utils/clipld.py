@@ -124,10 +124,7 @@ class bert_data():
             raise KeyError(f"[ERROR] Missing required columns in {path}: {missing_cols}")
 
         original_len = len(self.data)
-        self.data = self.data.dropna(subset=['content'])
         self.data['content'] = self.data['content'].fillna('').astype(str)
-        if len(self.data) < original_len:
-            print(f"[INFO] Dropped {original_len - len(self.data)} rows with missing content in {path}")
 
         if len(self.data) == 0:
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")

@@ -37,6 +37,12 @@ def normalized_text(value):
         return ''
     return ''.join(unicodedata.normalize('NFKC', html.unescape(str(value))).casefold().split())
 
+def eligible_rows(frame, dataset=None):
+    if dataset == 'weibo21' and 'category' in frame:
+        unknown = {'cannotdetermine', 'undetermined', '\u65e0\u6cd5\u786e\u5b9a'}
+        return frame.loc[~frame['category'].map(normalized_text).isin(unknown)].copy()
+    return frame.copy()
+
 def sample_keys(row, image_root=None, hashes=None, images=None):
     hashes = {} if hashes is None else hashes
     keys = set()
@@ -118,13 +124,14 @@ def audit_frames(frames, image_root=None):
             raise ValueError('Dataset labels must be finite binary values')
     return {name: len(frame) for name, frame in frames.items()}
 
-def audit_files(paths, image_root=None):
+def audit_files(paths, image_root=None, dataset=None):
     frames = {}
     for name, value in paths.items():
         path = Path(value)
         if path.is_absolute() or str(value).startswith(("/", "\\")) or ntpath.isabs(str(value)) or ntpath.splitdrive(str(value))[0]:
             raise ValueError('Dataset paths must be relative')
-        frames[name] = pd.read_excel(path) if path.suffix.lower() in ('.xlsx', '.xls') else pd.read_csv(path)
+        frame = pd.read_excel(path) if path.suffix.lower() in ('.xlsx', '.xls') else pd.read_csv(path)
+        frames[name] = eligible_rows(frame, dataset)
     return audit_frames(frames, image_root)
 
 def grouped_split(frame, seed=3407, ratios=(0.6, 0.2, 0.2), image_root=None):

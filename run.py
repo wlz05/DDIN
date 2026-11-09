@@ -224,7 +224,7 @@ class Run():
         from utils.partition import audit_files
         from utils.official import verify_files
         paths = {'train': self.train_path, 'val': self.val_path, 'test': self.test_path}
-        audit_files(paths, self.root_path)
+        audit_files(paths, self.root_path, self.dataset)
         verify_files(self.dataset, paths, self.configinfo.get('official_root') or self.root_path)
         train_loader, val_loader, test_loader = self.get_dataloader(self.dataset)
 

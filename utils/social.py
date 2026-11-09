@@ -11,6 +11,7 @@ from torchvision import datasets, models, transforms
 import os
 import numpy as np
 from utils.features import binary_labels, read_features, clip_tokens
+from utils.partition import eligible_rows
 from PIL import Image
 
 def read_image():
@@ -55,8 +56,7 @@ def read_pkl(path):
         raise ValueError(f"[ERROR] Corrupted pickle file: {path}, error: {e}")
 
 def df_filter(df_data):
-    df_data = df_data[df_data['category'] != 'cannot determine']
-    return df_data
+    return eligible_rows(df_data, 'weibo21')
 
 def word2input(texts, vocab_file, max_len):
     """BERT tokenization with automatic fallback for missing/invalid text."""
@@ -124,10 +124,8 @@ class bert_data():
             raise KeyError(f"[ERROR] Missing required columns in {path}: {missing_cols}")
 
         original_len = len(self.data)
-        self.data = self.data.dropna(subset=['content'])
+        self.data = df_filter(self.data)
         self.data['content'] = self.data['content'].fillna('').astype(str)
-        if len(self.data) < original_len:
-            print(f"[INFO] Dropped {original_len - len(self.data)} rows with missing content in {path}")
 
         if len(self.data) == 0:
             raise ValueError(f"[ERROR] No valid data after filtering in {path}")
