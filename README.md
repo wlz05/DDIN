@@ -12,13 +12,24 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 ---
 config:
   themeCSS: |
-    marker[id*="-pointEnd"] path {
+    marker[id$="-pointEnd"], marker[id$="-pointEnd-margin"] {
+      overflow: visible;
+    }
+    marker[id$="-pointEnd"] path, marker[id$="-pointEnd-margin"] path {
       fill: none !important;
       stroke: #687a90 !important;
       stroke-width: 1.4px !important;
       stroke-linecap: round;
       stroke-linejoin: round;
-      d: path("M 1 1 L 9 5 L 1 9");
+    }
+    marker[id$="-pointEnd"][refX="5"] path {
+      d: path("M 0.8 1.4 L 5 5 L 0.8 8.6");
+    }
+    marker[id$="-pointEnd"][refX="6"] path {
+      d: path("M 2.8 2.2 L 6 5 L 2.8 7.8");
+    }
+    marker[id$="-pointEnd-margin"] path {
+      d: path("M 7.8 3.85 L 11.5 7 L 7.8 10.15");
     }
   flowchart:
     curve: monotoneY
