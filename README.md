@@ -11,26 +11,38 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 ```mermaid
 ---
 config:
+  themeCSS: |
+    marker[id*="-pointEnd"] path {
+      fill: none !important;
+      stroke: #687a90 !important;
+      stroke-width: 1.4px !important;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      d: path("M 1 1 L 9 5 L 1 9");
+    }
   flowchart:
-    wrappingWidth: 560
-    rankSpacing: 24
+    curve: monotoneY
+    diagramPadding: 18
+    nodeSpacing: 28
+    rankSpacing: 40
+    wrappingWidth: 235
 ---
-flowchart TD
-    L["Local tokens<br/>BERT text and MAE image"]
-    C["Global embeddings<br/>CLIP text and CLIP image"]
-    C --> P["Multi-scale projection"]
-    L --> LL["Local-local<br/>Masked text-to-image attention"]
-    L -->|Pooled MAE image| P
-    P --> GL["Global-local<br/>CLIP text and pooled MAE image"]
-    P --> GG["Global-global<br/>CLIP text, CLIP image and their difference"]
+flowchart TB
+    L["BERT text and MAE image<br/>Local tokens"]
+    C["CLIP text and image<br/>Global embeddings"]
+    L --> LL["Local-local conflict<br/>Masked text-to-image attention"]
+    L -->|Pooled MAE image| P["Multi-scale projection"]
+    C --> P
+    P --> GL["Global-local conflict<br/>CLIP text and pooled MAE image"]
+    P --> GG["Global-global conflict<br/>CLIP text, image and difference"]
     LL --> S["Hierarchical conflict synergy"]
     GL --> S
     GG --> S
-    S --> W["Domain-adaptive conflict weighting"]
-    D["News domain"] --> W
-    W --> F["Multimodal global fusion"]
-    P -->|CLIP text, image and their product| F
-    F --> Y["Main classifier"]
+    D["News domain"] --> W["Domain-adaptive conflict weighting"]
+    S --> W
+    W --> F["Global fusion and main classifier"]
+    P -->|CLIP text, image and product| F
+    linkStyle default stroke:#687a90,stroke-width:1.4px
 ```
 
 ### Key Contributions
