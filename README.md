@@ -16,14 +16,21 @@ config:
     rankSpacing: 24
 ---
 flowchart TD
-    A["(a) Dual-Stream Multi-Granularity Feature Extraction<br/>BERT: text local; MAE: image local<br/>CLIP: text-image global"]
-    B["(b) Multi-Scale Semantic Projection"]
-    C["(c) Multi-Granularity Cross-Modal Inconsistency Mining<br/>Global-Global Inconsistency<br/>Global-Local Inconsistency<br/>Local-Local Inconsistency: Cross-Attention"]
-    D["(d) Hierarchical Conflict Synergy Network"]
-    E["(e) Domain-Adaptive Inconsistency Weighting"]
-    F["(f) Multimodal Global Fusion"]
-    G["Classifier"]
-    A --> B --> C --> D --> E --> F --> G
+    L["Local tokens<br/>BERT text and MAE image"]
+    C["Global embeddings<br/>CLIP text and CLIP image"]
+    C --> P["Multi-scale projection"]
+    L --> LL["Local-local<br/>Masked text-to-image attention"]
+    L -->|Pooled MAE image| P
+    P --> GL["Global-local<br/>CLIP text and pooled MAE image"]
+    P --> GG["Global-global<br/>CLIP text, CLIP image and their difference"]
+    LL --> S["Hierarchical conflict synergy"]
+    GL --> S
+    GG --> S
+    S --> W["Domain-adaptive conflict weighting"]
+    D["News domain"] --> W
+    W --> F["Multimodal global fusion"]
+    P -->|CLIP text, image and their product| F
+    F --> Y["Main classifier"]
 ```
 
 ### Key Contributions
@@ -32,7 +39,8 @@ flowchart TD
 - **Hierarchical Conflict Synergy**: A Transformer-based module that enables conflict features at different granularities to communicate and reinforce each other.
 - **Domain-Adaptive Weighting**: Dynamically adjusts the importance of different inconsistency signals based on the news domain (up to 9 categories per dataset, depending on the source; see [Dataset Category Mapping](#dataset-category-mapping)).
 - **Multi-Scale Semantic Projection**: Employs multiple parallel projection channels to capture polysemous semantic correspondences between text and images.
-- **Mixture of Experts (MoE)**: Multi-domain expert/gate networks route each domain's features through specialized and shared experts, with domain-specific gating for adaptive fusion.
+
+The diagram follows the main classifier in [model/net.py](model/net.py). The separate `Gossip` driver implements shared and domain-specific experts in [model/gossip.py](model/gossip.py).
 
 ---
 
