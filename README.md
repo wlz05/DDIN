@@ -11,7 +11,13 @@ Designed for fake news detection on multiple multimodal datasets including Weibo
 ```mermaid
 ---
 config:
+  block:
+    padding: 26
   themeCSS: |
+    path[marker-end] {
+      stroke: #687a90 !important;
+      stroke-width: 1.4px !important;
+    }
     marker[id$="-pointEnd"], marker[id$="-pointEnd-margin"] {
       overflow: visible;
     }
@@ -31,29 +37,18 @@ config:
     marker[id$="-pointEnd-margin"] path {
       d: path("M 7.8 3.85 L 11.5 7 L 7.8 10.15");
     }
-  flowchart:
-    curve: monotoneY
-    diagramPadding: 18
-    nodeSpacing: 28
-    rankSpacing: 40
-    wrappingWidth: 235
 ---
-flowchart TB
-    L["BERT text and MAE image<br/>Local tokens"]
-    C["CLIP text and image<br/>Global embeddings"]
-    L --> LL["Local-local conflict<br/>Masked text-to-image attention"]
-    L -->|Pooled MAE image| P["Multi-scale projection"]
-    C --> P
-    P --> GL["Global-local conflict<br/>CLIP text and pooled MAE image"]
-    P --> GG["Global-global conflict<br/>CLIP text, image and difference"]
-    LL --> S["Hierarchical conflict synergy"]
-    GL --> S
-    GG --> S
-    D["News domain"] --> W["Domain-adaptive conflict weighting"]
-    S --> W
-    W --> F["Global fusion and main classifier"]
-    P -->|CLIP text, image and product| F
-    linkStyle default stroke:#687a90,stroke-width:1.4px
+block-beta
+    columns 1
+    A["<b>1. Encode text and images</b><br/>BERT and MAE local tokens<br/>CLIP text and image embeddings"]
+    B["<b>2. Project features at multiple scales</b><br/>Project CLIP embeddings and pooled MAE features<br/>Retain local tokens for cross-attention"]
+    C["<b>3. Compare the modalities at three levels</b><br/>Local to local: masked text-to-image attention<br/>Global to local: CLIP text and pooled MAE<br/>Global to global: CLIP image, text, and their difference"]
+    D["<b>4. Combine and weight conflicts</b><br/>Hierarchical conflict interaction<br/>Weight the three signals using the news domain"]
+    E["<b>5. Fuse features and classify</b><br/>Weighted conflict, projected CLIP text and image,<br/>and their elementwise product feed the classifier"]
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
 ### Key Contributions
